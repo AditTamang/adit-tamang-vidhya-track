@@ -37,6 +37,8 @@ export const sendOTPEmail = async (email, otp, purpose) => {
     `,
   };
 
+  //mail
+
   const mailOptions = {
     from: `"VidyaTrack" <${process.env.EMAIL_USER}>`,
     to: email,
