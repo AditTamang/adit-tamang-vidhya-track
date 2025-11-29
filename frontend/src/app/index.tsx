@@ -1,5 +1,3 @@
-//tsrafce
-
 import { Link } from 'expo-router'
 import React from 'react'
 import { Text, View } from 'react-native'
@@ -10,8 +8,8 @@ const index = (props: Props) => {
     return (
         <View>
             <Text>This is index</Text>
-            <Link href={"/signIn"}>Go to Sign In</Link>
-            <Link href={"/signUp"}>Go to Sign Up</Link>
+            <Link href={"/login"}>Go to Login</Link>
+            <Link href={"/register"}>Go to Sign Up</Link>
         </View>
     )
 }
