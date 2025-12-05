@@ -6,7 +6,12 @@ import {
   verifyUserEmail,
   updateUserPassword,
 } from "../models/authModel.js";
-import { checkOTPValidity, generateOTP, saveOTP, verifyOTP } from "./otpService.js";
+import {
+  checkOTPValidity,
+  generateOTP,
+  saveOTP,
+  verifyOTP,
+} from "./otpService.js";
 import { sendOTPEmail } from "./emailService.js";
 
 // Generate JWT Token
@@ -26,7 +31,7 @@ export const registerService = async (name, email, phone_number, password) => {
   const hashedPassword = await bcrypt.hash(password, 10);
   const newUser = await createUser(name, email, phone_number, hashedPassword);
 
-  // Generate and send OTP 
+  // Generate and send OTP
   const otp = generateOTP();
   await saveOTP(email, otp, "registration");
   await sendOTPEmail(email, otp, "registration");
@@ -94,12 +99,7 @@ export const verifyForgotPasswordOTP = async (email, otp) => {
 };
 
 // Reset Password Service
-export const resetPasswordService = async (email, otp, newPassword) => {
-  const isValid = await verifyOTP(email, otp, "forgot_password");
-  if (!isValid) {
-    throw new Error("Invalid or expired OTP");
-  }
-
+export const resetPasswordService = async (email, newPassword) => {
   const hashedPassword = await bcrypt.hash(newPassword, 11);
   const updatedUser = await updateUserPassword(email, hashedPassword);
 

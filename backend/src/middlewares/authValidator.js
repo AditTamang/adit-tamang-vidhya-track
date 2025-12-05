@@ -33,12 +33,8 @@ const forgotPasswordSchema = Joi.object({
   email: Joi.string().email().required(),
 });
 
-const resetPasswordSchema = Joi.object({
+const resetPasswordSimpleSchema = Joi.object({
   email: Joi.string().email().required(),
-  otp: Joi.string()
-    .length(6)
-    .pattern(/^[0-9]+$/)
-    .required(),
   newPassword: Joi.string().min(6).required(),
 });
 
@@ -86,13 +82,22 @@ export const validateForgotPassword = (req, res, next) => {
   next();
 };
 
+// export const resetPassword = async (req, res, next) => {
+//   try {
+//     const { email, newPassword } = req.body;
+//     await resetPasswordService(email, newPassword);
+//     sendResponse(res, 200, "Password reset successful");
+//   } catch (err) {
+//     next(err);
+//   }
+// };
+
 export const validateResetPassword = (req, res, next) => {
-  const { error } = resetPasswordSchema.validate(req.body);
-  if (error) {
+  const { error } = resetPasswordSimpleSchema.validate(req.body);
+  if (error)
     return res.status(400).json({
       status: 400,
       message: error.details[0].message,
     });
-  }
   next();
 };

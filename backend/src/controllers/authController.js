@@ -89,16 +89,12 @@ export const verifyResetOTP = async (req, res, next) => {
   }
 };
 
-// Reset Password
 export const resetPassword = async (req, res, next) => {
   try {
-    const { email, otp, newPassword } = req.body;
-    await resetPasswordService(email, otp, newPassword);
+    const { email, newPassword } = req.body;
+    await resetPasswordService(email, newPassword);
     sendResponse(res, 200, "Password reset successful");
   } catch (err) {
-    if (err.message === "Invalid or expired OTP") {
-      return sendResponse(res, 400, err.message);
-    }
     next(err);
   }
 };
