@@ -14,18 +14,27 @@ const sendResponse = (res, status, message, data = null) => {
 // Register
 export const register = async (req, res, next) => {
   try {
-    const { name, email, phone_number, password } = req.body;
-    const newUser = await registerService(name, email, phone_number, password);
-    sendResponse(
-      res,
-      201,
-      "Registration successful. Please check your email for OTP.",
-      newUser
-    );
-  } catch (err) {
-    if (err.message === "Email already registered") {
-      return sendResponse(res, 409, err.message);
+    const { name, email, phone_number, password, role } = req.body;
+
+    if (!role) {
+      return res
+        .status(400)
+        .json({ status: 400, message: '"role" is required' });
     }
+
+    const newUser = await registerService(
+      name,
+      email,
+      phone_number,
+      password,
+      role
+    );
+    res.status(201).json({
+      status: 201,
+      message: "Registration successful. Please check your email for OTP.",
+      data: newUser,
+    });
+  } catch (err) {
     next(err);
   }
 };
@@ -37,9 +46,8 @@ export const verifyRegistration = async (req, res, next) => {
     const result = await verifyRegistrationOTP(email, otp);
     sendResponse(res, 200, "Email verified successfully", result);
   } catch (err) {
-    if (err.message === "Invalid or expired OTP") {
+    if (err.message === "Invalid or expired OTP")
       return sendResponse(res, 400, err.message);
-    }
     next(err);
   }
 };
@@ -68,9 +76,8 @@ export const forgotPassword = async (req, res, next) => {
     await forgotPasswordService(email);
     sendResponse(res, 200, "OTP sent to your email");
   } catch (err) {
-    if (err.message === "Email not found") {
+    if (err.message === "Email not found")
       return sendResponse(res, 404, err.message);
-    }
     next(err);
   }
 };
@@ -82,13 +89,13 @@ export const verifyResetOTP = async (req, res, next) => {
     await verifyForgotPasswordOTP(email, otp);
     sendResponse(res, 200, "OTP verified. You can now reset your password.");
   } catch (err) {
-    if (err.message === "Invalid or expired OTP") {
+    if (err.message === "Invalid or expired OTP")
       return sendResponse(res, 400, err.message);
-    }
     next(err);
   }
 };
 
+// Reset Password
 export const resetPassword = async (req, res, next) => {
   try {
     const { email, newPassword } = req.body;

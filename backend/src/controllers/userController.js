@@ -10,16 +10,25 @@ const sendResponse = (res, status, message, data = null) => {
   res.status(status).json({ status, message, data });
 };
 
+// Create User
 export const createUser = async (req, res, next) => {
   try {
-    const { name, email } = req.body;
-    const newUser = await createUserService(name, email);
+    const { name, email, password, role, status, phone_number } = req.body;
+    const newUser = await createUserService({
+      name,
+      email,
+      password,
+      role,
+      status,
+      phone_number,
+    });
     sendResponse(res, 201, "User created successfully", newUser);
   } catch (err) {
     next(err);
   }
 };
 
+// Get All Users
 export const getAllUsers = async (req, res, next) => {
   try {
     const users = await getAllUsersService();
@@ -29,6 +38,7 @@ export const getAllUsers = async (req, res, next) => {
   }
 };
 
+// Get User By ID
 export const getUserById = async (req, res, next) => {
   try {
     const user = await getUserByIdService(req.params.id);
@@ -39,10 +49,18 @@ export const getUserById = async (req, res, next) => {
   }
 };
 
+// Update User
 export const updateUser = async (req, res, next) => {
   try {
-    const { name, email } = req.body;
-    const updatedUser = await updateUserService(req.params.id, name, email);
+    const { name, email, password, role, status, phone_number } = req.body;
+    const updatedUser = await updateUserService(req.params.id, {
+      name,
+      email,
+      password,
+      role,
+      status,
+      phone_number,
+    });
     if (!updatedUser) return sendResponse(res, 404, "User not found");
     sendResponse(res, 200, "User updated successfully", updatedUser);
   } catch (err) {
@@ -50,6 +68,7 @@ export const updateUser = async (req, res, next) => {
   }
 };
 
+// Delete User
 export const deleteUser = async (req, res, next) => {
   try {
     const deletedUser = await deleteUserService(req.params.id);

@@ -14,6 +14,8 @@ import {
   validateForgotPassword,
   validateResetPassword,
 } from "../middlewares/authValidator.js";
+import { authenticate } from "../middlewares/authMiddleware.js";
+import { logoutMiddleware } from "../middlewares/logoutMiddleware.js";
 
 const router = express.Router();
 
@@ -24,9 +26,9 @@ router.post("/verify-registration", validateVerifyOTP, verifyRegistration);
 // Login
 router.post("/login", validateLogin, login);
 
-// Password reset flow
 router.post("/forgot-password", validateForgotPassword, forgotPassword);
 router.post("/verify-reset-otp", validateVerifyOTP, verifyResetOTP);
 router.post("/reset-password", validateResetPassword, resetPassword);
+router.post("/logout", authenticate, logoutMiddleware);
 
 export default router;

@@ -3,8 +3,12 @@ import dotenv from "dotenv";
 import cors from "cors";
 import pool from "./config/dbConnection.js";
 import errorHandler from "./middlewares/errorHandler.js";
+
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+
+import profileRoutes from "./routes/profileRoutes.js";
+import parentStudentRoutes from "./routes/parentStudentRoutes.js";
 
 dotenv.config();
 
@@ -25,6 +29,9 @@ app.get("/", async (req, res) => {
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api", userRoutes);
+
+app.use("/api/profile", profileRoutes);
+app.use("/api/parent-student", parentStudentRoutes);
 
 // 404 Handler
 app.use((req, res) => {

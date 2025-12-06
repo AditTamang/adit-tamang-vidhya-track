@@ -7,12 +7,18 @@ export const findUserByEmail = async (email) => {
   return result.rows[0];
 };
 
-export const createUser = async (name, email, phone_number, hashedPassword) => {
+export const createUser = async (
+  name,
+  email,
+  phone_number,
+  hashedPassword,
+  role
+) => {
   const result = await pool.query(
-    `INSERT INTO users (name, email,  phone_number , password) 
-     VALUES ($1, $2, $3, $4) 
-     RETURNING id, name, email,  phone_number , is_verified, created_at`,
-    [name, email, phone_number, hashedPassword]
+    `INSERT INTO users (name, email, phone_number, password, role) 
+     VALUES ($1, $2, $3, $4, $5) 
+     RETURNING id, name, email, phone_number, role, is_verified, created_at`,
+    [name, email, phone_number, hashedPassword, role]
   );
   return result.rows[0];
 };

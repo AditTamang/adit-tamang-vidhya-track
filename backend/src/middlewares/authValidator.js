@@ -10,6 +10,16 @@ const registerSchema = Joi.object({
       "string.pattern.base": "Phone number must be 10-15 digits",
     }),
   password: Joi.string().min(6).required(),
+  role: Joi.string().valid("student", "teacher", "parent").required().messages({
+    "any.only": "Role must be one of 'student', 'teacher', or 'parent'",
+  }),
+  status: Joi.string()
+    .valid("active", "pending", "approved", "rejected")
+    .optional()
+    .messages({
+      "any.only":
+        "Status must be one of 'active', 'pending', 'approved', 'rejected'",
+    }),
 });
 
 const verifyOTPSchema = Joi.object({
@@ -81,16 +91,6 @@ export const validateForgotPassword = (req, res, next) => {
   }
   next();
 };
-
-// export const resetPassword = async (req, res, next) => {
-//   try {
-//     const { email, newPassword } = req.body;
-//     await resetPasswordService(email, newPassword);
-//     sendResponse(res, 200, "Password reset successful");
-//   } catch (err) {
-//     next(err);
-//   }
-// };
 
 export const validateResetPassword = (req, res, next) => {
   const { error } = resetPasswordSimpleSchema.validate(req.body);

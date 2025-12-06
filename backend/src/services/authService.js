@@ -16,20 +16,33 @@ import { sendOTPEmail } from "./emailService.js";
 
 // Generate JWT Token
 const generateToken = (user) => {
-  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-    expiresIn: "7d",
-  });
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
 };
 
 // Register Service
-export const registerService = async (name, email, phone_number, password) => {
+export const registerService = async (
+  name,
+  email,
+  phone_number,
+  password,
+  role
+) => {
   const existingUser = await findUserByEmail(email);
-  if (existingUser) {
-    throw new Error("Email already registered");
-  }
+  if (existingUser) throw new Error("Email already registered");
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = await createUser(name, email, phone_number, hashedPassword);
+
+  const newUser = await createUser(
+    name,
+    email,
+    phone_number,
+    hashedPassword,
+    role
+  );
 
   // Generate and send OTP
   const otp = generateOTP();
@@ -42,9 +55,7 @@ export const registerService = async (name, email, phone_number, password) => {
 // Verify Registration OTP
 export const verifyRegistrationOTP = async (email, otp) => {
   const isValid = await verifyOTP(email, otp, "registration");
-  if (!isValid) {
-    throw new Error("Invalid or expired OTP");
-  }
+  if (!isValid) throw new Error("Invalid or expired OTP");
 
   const verifiedUser = await verifyUserEmail(email);
   const token = generateToken(verifiedUser);
@@ -55,18 +66,12 @@ export const verifyRegistrationOTP = async (email, otp) => {
 // Login Service
 export const loginService = async (email, password) => {
   const user = await findUserByEmail(email);
-  if (!user) {
-    throw new Error("Invalid email or password");
-  }
+  if (!user) throw new Error("Invalid email or password");
 
-  if (!user.is_verified) {
-    throw new Error("Please verify your email first");
-  }
+  if (!user.is_verified) throw new Error("Please verify your email first");
 
   const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    throw new Error("Invalid email or password");
-  }
+  if (!isMatch) throw new Error("Invalid email or password");
 
   const token = generateToken(user);
   const { password: _, ...userWithoutPassword } = user;
@@ -77,9 +82,7 @@ export const loginService = async (email, password) => {
 // Forgot Password Service
 export const forgotPasswordService = async (email) => {
   const user = await findUserByEmail(email);
-  if (!user) {
-    throw new Error("Email not found");
-  }
+  if (!user) throw new Error("Email not found");
 
   const otp = generateOTP();
   await saveOTP(email, otp, "forgot_password");
@@ -91,16 +94,14 @@ export const forgotPasswordService = async (email) => {
 // Verify Forgot Password OTP
 export const verifyForgotPasswordOTP = async (email, otp) => {
   const isValid = await checkOTPValidity(email, otp, "forgot_password");
-  if (!isValid) {
-    throw new Error("Invalid or expired OTP");
-  }
+  if (!isValid) throw new Error("Invalid or expired OTP");
 
   return true;
 };
 
 // Reset Password Service
 export const resetPasswordService = async (email, newPassword) => {
-  const hashedPassword = await bcrypt.hash(newPassword, 11);
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
   const updatedUser = await updateUserPassword(email, hashedPassword);
 
   return updatedUser;
