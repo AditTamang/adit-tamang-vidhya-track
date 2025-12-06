@@ -4,36 +4,45 @@ import {
   getLinkedStudentsService,
 } from "../services/parentStudentService.js";
 
-export const requestLinkController = async (req, res, next) => {
+export const requestLinkController = async (req, res) => {
   try {
-    const { studentId } = req.body;
     const parentId = req.user.id;
+    const { studentId } = req.body;
+
+    if (!studentId) {
+      return res
+        .status(400)
+        .json({ status: 400, message: "studentId is required" });
+    }
+
     const result = await requestLinkService(parentId, studentId);
+
     res.status(201).json({
       status: 201,
       message: "Link request sent",
       data: result,
     });
   } catch (err) {
-    next(err);
+    res.status(400).json({ status: 400, message: err.message });
   }
 };
 
-export const approveLinkController = async (req, res, next) => {
+export const approveLinkController = async (req, res) => {
   try {
+    const adminId = req.user.id;
     const { parentId, studentId } = req.body;
-    const result = await approveLinkService(parentId, studentId);
+    const result = await approveLinkService(parentId, studentId, adminId);
     res.status(200).json({
       status: 200,
       message: "Parent linked successfully",
       data: result,
     });
   } catch (err) {
-    next(err);
+    res.status(400).json({ status: 400, message: err.message });
   }
 };
 
-export const getLinkedStudentsController = async (req, res, next) => {
+export const getLinkedStudentsController = async (req, res) => {
   try {
     const parentId = req.user.id;
     const students = await getLinkedStudentsService(parentId);
@@ -43,6 +52,6 @@ export const getLinkedStudentsController = async (req, res, next) => {
       data: students,
     });
   } catch (err) {
-    next(err);
+    res.status(400).json({ status: 400, message: err.message });
   }
 };

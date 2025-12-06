@@ -14,7 +14,8 @@ const sendResponse = (res, status, message, data = null) => {
 // Register
 export const register = async (req, res, next) => {
   try {
-    const { name, email, phone_number, password, role } = req.body;
+    const { name, email, phone_number, password, role, className, section } =
+      req.body;
 
     if (!role) {
       return res
@@ -27,11 +28,14 @@ export const register = async (req, res, next) => {
       email,
       phone_number,
       password,
-      role
+      role,
+      className,
+      section
     );
+
     res.status(201).json({
       status: 201,
-      message: "Registration successful. Please check your email for OTP.",
+      message: "Registration successful",
       data: newUser,
     });
   } catch (err) {

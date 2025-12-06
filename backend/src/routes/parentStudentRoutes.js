@@ -10,6 +10,6 @@ const router = express.Router();
 
 router.post("/request", authenticate, requestLinkController);
 router.post("/approve", authenticate, approveLinkController);
-router.get("/my-students", authenticate, getLinkedStudentsController);
+router.get("/linked", authenticate, getLinkedStudentsController);
 
 export default router;

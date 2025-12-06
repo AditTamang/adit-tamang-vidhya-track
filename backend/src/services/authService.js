@@ -1,17 +1,21 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import pool from "../config/dbConnection.js";
+
 import {
   findUserByEmail,
   createUser,
   verifyUserEmail,
   updateUserPassword,
 } from "../models/authModel.js";
+
 import {
   checkOTPValidity,
   generateOTP,
   saveOTP,
   verifyOTP,
 } from "./otpService.js";
+
 import { sendOTPEmail } from "./emailService.js";
 
 // Generate JWT Token
@@ -23,19 +27,38 @@ const generateToken = (user) => {
   );
 };
 
-// Register Service
+// Generate unique student code (STU20251234)
+const generateStudentCode = async () => {
+  const year = new Date().getFullYear();
+  const random = Math.floor(1000 + Math.random() * 9000);
+  const code = `STU${year}${random}`;
+
+  const exists = await pool.query(
+    "SELECT id FROM students WHERE student_code=$1",
+    [code]
+  );
+
+  if (exists.rows.length > 0) return generateStudentCode();
+  return code;
+};
+
+// REGISTER (Full Flow)
 export const registerService = async (
   name,
   email,
   phone_number,
   password,
-  role
+  role,
+  className = null,
+  section = null
 ) => {
-  const existingUser = await findUserByEmail(email);
-  if (existingUser) throw new Error("Email already registered");
+  // Check existing user
+  const existing = await findUserByEmail(email);
+  if (existing) throw new Error("Email already registered");
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
+  // 1. Insert into users table
   const newUser = await createUser(
     name,
     email,
@@ -44,7 +67,28 @@ export const registerService = async (
     role
   );
 
-  // Generate and send OTP
+  // 2. Insert into role-based tables
+  if (role === "student") {
+    const studentCode = await generateStudentCode();
+
+    await pool.query(
+      `INSERT INTO students (user_id, student_code, class, section)
+       VALUES ($1, $2, $3, $4)`,
+      [newUser.id, studentCode, className, section]
+    );
+  }
+
+  if (role === "parent") {
+    await pool.query(`INSERT INTO parents (user_id) VALUES ($1)`, [newUser.id]);
+  }
+
+  if (role === "teacher") {
+    await pool.query(`INSERT INTO teachers (user_id) VALUES ($1)`, [
+      newUser.id,
+    ]);
+  }
+
+  // 3. Generate & store OTP
   const otp = generateOTP();
   await saveOTP(email, otp, "registration");
   await sendOTPEmail(email, otp, "registration");
@@ -52,7 +96,7 @@ export const registerService = async (
   return newUser;
 };
 
-// Verify Registration OTP
+// Verify registration OTP
 export const verifyRegistrationOTP = async (email, otp) => {
   const isValid = await verifyOTP(email, otp, "registration");
   if (!isValid) throw new Error("Invalid or expired OTP");
@@ -70,16 +114,17 @@ export const loginService = async (email, password) => {
 
   if (!user.is_verified) throw new Error("Please verify your email first");
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) throw new Error("Invalid email or password");
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) throw new Error("Invalid email or password");
 
   const token = generateToken(user);
-  const { password: _, ...userWithoutPassword } = user;
 
-  return { user: userWithoutPassword, token };
+  const { password: _, ...cleanUser } = user;
+
+  return { user: cleanUser, token };
 };
 
-// Forgot Password Service
+// Forgot Password
 export const forgotPasswordService = async (email) => {
   const user = await findUserByEmail(email);
   if (!user) throw new Error("Email not found");
@@ -93,16 +138,14 @@ export const forgotPasswordService = async (email) => {
 
 // Verify Forgot Password OTP
 export const verifyForgotPasswordOTP = async (email, otp) => {
-  const isValid = await checkOTPValidity(email, otp, "forgot_password");
-  if (!isValid) throw new Error("Invalid or expired OTP");
+  const valid = await checkOTPValidity(email, otp, "forgot_password");
+  if (!valid) throw new Error("Invalid or expired OTP");
 
   return true;
 };
 
-// Reset Password Service
+// Reset Password
 export const resetPasswordService = async (email, newPassword) => {
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-  const updatedUser = await updateUserPassword(email, hashedPassword);
-
-  return updatedUser;
+  const hash = await bcrypt.hash(newPassword, 10);
+  return await updateUserPassword(email, hash);
 };
