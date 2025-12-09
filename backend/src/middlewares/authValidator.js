@@ -2,17 +2,32 @@ import Joi from "joi";
 
 const registerSchema = Joi.object({
   name: Joi.string().min(3).max(100).required(),
-  email: Joi.string().email().required(),
+  email: Joi.string()
+    .email()
+    .pattern(/@gmail\.com$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
+    }),
   phone_number: Joi.string()
     .pattern(/^[0-9]{10,15}$/)
     .required()
     .messages({
       "string.pattern.base": "Phone number must be 10-15 digits",
     }),
-  password: Joi.string().min(6).required(),
+  password: Joi.string()
+    .min(6)
+    .pattern(/^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/)
+    .required()
+    .messages({
+      "string.pattern.base":
+        "Password must contain at least one uppercase letter, one number, and one special character",
+    }),
   role: Joi.string().valid("student", "teacher", "parent").required().messages({
     "any.only": "Role must be one of 'student', 'teacher', or 'parent'",
   }),
+  className: Joi.string().optional().allow(null, ""),
+  section: Joi.string().optional().allow(null, ""),
   status: Joi.string()
     .valid("active", "pending", "approved", "rejected")
     .optional()
@@ -23,7 +38,13 @@ const registerSchema = Joi.object({
 });
 
 const verifyOTPSchema = Joi.object({
-  email: Joi.string().email().required(),
+  email: Joi.string()
+    .email()
+    .pattern(/@gmail\.com$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
+    }),
   otp: Joi.string()
     .length(6)
     .pattern(/^[0-9]+$/)
@@ -35,17 +56,42 @@ const verifyOTPSchema = Joi.object({
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
+  email: Joi.string()
+    .email()
+    .pattern(/@gmail\.com$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
+    }),
   password: Joi.string().required(),
 });
 
 const forgotPasswordSchema = Joi.object({
-  email: Joi.string().email().required(),
+  email: Joi.string()
+    .email()
+    .pattern(/@gmail\.com$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
+    }),
 });
 
 const resetPasswordSimpleSchema = Joi.object({
-  email: Joi.string().email().required(),
-  newPassword: Joi.string().min(6).required(),
+  email: Joi.string()
+    .email()
+    .pattern(/@gmail\.com$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
+    }),
+  newPassword: Joi.string()
+    .min(6)
+    .pattern(/^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/)
+    .required()
+    .messages({
+      "string.pattern.base":
+        "Password must contain at least one uppercase letter, one number, and one special character",
+    }),
 });
 
 export const validateRegister = (req, res, next) => {

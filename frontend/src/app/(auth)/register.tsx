@@ -27,6 +27,8 @@ const Register = (props: Props) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [studentCode, setStudentCode] = useState('');
+    const [className, setClassName] = useState('');
+    const [section, setSection] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -34,6 +36,22 @@ const Register = (props: Props) => {
     const handleRegister = async () => {
         if (!fullName || !email || !password || !confirmPassword) {
             Alert.alert('Error', 'Please fill in all required fields');
+            return;
+        }
+
+        // Validate Gmail email
+        if (!email.endsWith('@gmail.com')) {
+            Alert.alert('Error', 'Email must be a Gmail address (@gmail.com)');
+            return;
+        }
+
+        // Validate password format: at least 1 uppercase, 1 number, 1 special character
+        const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/;
+        if (!passwordRegex.test(password)) {
+            Alert.alert(
+                'Error',
+                'Password must contain at least one uppercase letter, one number, and one special character'
+            );
             return;
         }
 
@@ -49,18 +67,45 @@ const Register = (props: Props) => {
 
         setIsLoading(true);
         try {
-            // TODO: Implement actual registration logic here
-            setTimeout(() => {
-                setIsLoading(false);
+            const { register } = await import('@/services/authService');
+            
+            const registerData: any = {
+                name: fullName,
+                email: email,
+                phone_number: phone,
+                password: password,
+                role: selectedRole,
+            };
+
+            // Add className and section for student role
+            if (selectedRole === 'student') {
+                registerData.className = className || undefined;
+                registerData.section = section || undefined;
+            }
+
+            const response = await register(registerData);
+
+            if (response.status === 201) {
                 Alert.alert(
                     'Success',
-                    'Registration submitted! Please wait for admin approval.',
-                    [{ text: 'OK', onPress: () => router.replace('/login') }]
+                    'Registration successful! Please check your email for OTP verification.',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => router.push({
+                                pathname: '/otp-verification',
+                                params: { email, flow: 'registration' }
+                            })
+                        }
+                    ]
                 );
-            }, 1500);
-        } catch (error) {
+            } else {
+                Alert.alert('Error', response.message || 'Registration failed');
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Registration failed. Please try again.');
+        } finally {
             setIsLoading(false);
-            Alert.alert('Error', 'Registration failed');
         }
     };
 
@@ -77,7 +122,7 @@ const Register = (props: Props) => {
                     {/* Logo */}
                     <View style={styles.logoContainer}>
                         <Image
-                            source={require('../../../assets/icon.png')}
+                            source={require('../../../assets/logo.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />
@@ -145,6 +190,28 @@ const Register = (props: Props) => {
                                     Parent
                                 </Text>
                             </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.roleButton,
+                                    selectedRole === 'student' && styles.roleButtonActive,
+                                ]}
+                                onPress={() => setSelectedRole('student')}
+                            >
+                                <Ionicons
+                                    name="person-outline"
+                                    size={20}
+                                    color={selectedRole === 'student' ? '#fff' : '#666'}
+                                />
+                                <Text
+                                    style={[
+                                        styles.roleButtonText,
+                                        selectedRole === 'student' && styles.roleButtonTextActive,
+                                    ]}
+                                >
+                                    Student
+                                </Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -170,7 +237,7 @@ const Register = (props: Props) => {
                             <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Enter your email"
+                                placeholder="Enter your email address"
                                 placeholderTextColor="#999"
                                 value={email}
                                 onChangeText={setEmail}
@@ -179,6 +246,9 @@ const Register = (props: Props) => {
                                 autoComplete="email"
                             />
                         </View>
+                        <Text style={styles.helperText}>
+                            Only Gmail addresses are allowed
+                        </Text>
                     </View>
 
                     {/* Phone Input */}
@@ -218,6 +288,40 @@ const Register = (props: Props) => {
                         </View>
                     )}
 
+                    {/* Class and Section (for Students only) */}
+                    {selectedRole === 'student' && (
+                        <>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Class</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="school-outline" size={20} color="#666" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter your class (e.g., 10, 11, 12)"
+                                        placeholderTextColor="#999"
+                                        value={className}
+                                        onChangeText={setClassName}
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Section</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="people-outline" size={20} color="#666" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter your section (e.g., A, B, C)"
+                                        placeholderTextColor="#999"
+                                        value={section}
+                                        onChangeText={setSection}
+                                        autoCapitalize="characters"
+                                    />
+                                </View>
+                            </View>
+                        </>
+                    )}
+
                     {/* Password Input */}
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Password</Text>
@@ -243,6 +347,9 @@ const Register = (props: Props) => {
                                 />
                             </TouchableOpacity>
                         </View>
+                        <Text style={styles.helperText}>
+                            Must contain: 1 uppercase, 1 number, 1 special character
+                        </Text>
                     </View>
 
                     {/* Confirm Password Input */}

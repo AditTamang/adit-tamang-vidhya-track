@@ -30,20 +30,38 @@ const Login = (props: Props) => {
             return;
         }
 
+        // Validate Gmail email
+        if (!email.endsWith('@gmail.com')) {
+            Alert.alert('Error', 'Email must be a Gmail address (@gmail.com)');
+            return;
+        }
+
         setIsLoading(true);
         try {
-            // TODO: Implement actual login logic here
-            // Example: await authApi.login(email, password);
+            const { login } = await import('@/services/authService');
+            const response = await login({ email, password });
 
-            // Simulate API call
-            setTimeout(() => {
-                setIsLoading(false);
+            if (response.status === 200 && response.data) {
+                const user = response.data.user;
+                const userRole = user.role;
+
                 // Navigate to appropriate dashboard based on user role
-                // router.replace('/(teacher)/dashboard');
-            }, 1500);
-        } catch (error) {
+                if (userRole === 'parent') {
+                    router.replace('/(parent)/dashboard');
+                } else if (userRole === 'teacher') {
+                    router.replace('/(teacher)/dashboard');
+                } else if (userRole === 'student') {
+                    router.replace('/(student)/dashboard');
+                } else {
+                    router.replace('/(parent)/dashboard'); // Default fallback
+                }
+            } else {
+                Alert.alert('Error', response.message || 'Invalid credentials');
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Login failed. Please try again.');
+        } finally {
             setIsLoading(false);
-            Alert.alert('Error', 'Invalid credentials');
         }
     };
 
@@ -60,7 +78,7 @@ const Login = (props: Props) => {
                     {/* Logo */}
                     <View style={styles.logoContainer}>
                         <Image
-                            source={require('../../../assets/icon.png')}
+                            source={require('../../../assets/logo.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />
@@ -88,7 +106,7 @@ const Login = (props: Props) => {
                             <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Enter your email"
+                                placeholder="Enter your email address)"
                                 placeholderTextColor="#999"
                                 value={email}
                                 onChangeText={setEmail}
