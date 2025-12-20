@@ -25,9 +25,9 @@ export const createUser = async (
 
 export const verifyUserEmail = async (email) => {
   const result = await pool.query(
-    `UPDATE users SET is_verified = TRUE 
-     WHERE email = $1 
-     RETURNING id, name, email, is_verified`,
+    `UPDATE users SET is_verified = TRUE
+     WHERE email = $1
+     RETURNING id, name, email, role, is_verified, is_approved`,
     [email]
   );
   return result.rows[0];

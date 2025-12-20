@@ -8,7 +8,7 @@ export const generateOTP = () => {
 
 // Save OTP to database
 export const saveOTP = async (email, otp, purpose) => {
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const expiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
 
   await pool.query(
     `INSERT INTO otps (email, otp, purpose, expires_at) 
@@ -48,7 +48,16 @@ export const checkOTPValidity = async (email, otp, purpose) => {
     [email, otp, purpose]
   );
 
-  return result.rows.length>0;
+  return result.rows.length > 0;
+};
+
+// Invalidate old OTPs for a specific email and purpose (for resend)
+export const invalidateOldOTPs = async (email, purpose) => {
+  await pool.query(
+    `UPDATE otps SET is_used = TRUE
+     WHERE email = $1 AND purpose = $2 AND is_used = FALSE`,
+    [email, purpose]
+  );
 };
 
 // Clean up expired OTPs

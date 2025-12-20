@@ -14,6 +14,7 @@ import {
   generateOTP,
   saveOTP,
   verifyOTP,
+  invalidateOldOTPs,
 } from "./otpService.js";
 
 import { sendOTPEmail } from "./emailService.js";
@@ -97,30 +98,44 @@ export const registerService = async (
 };
 
 // Verify registration OTP
+// After OTP is verified, user must wait for admin approval before login
 export const verifyRegistrationOTP = async (email, otp) => {
   const isValid = await verifyOTP(email, otp, "registration");
   if (!isValid) throw new Error("Invalid or expired OTP");
 
   const verifiedUser = await verifyUserEmail(email);
-  const token = generateToken(verifiedUser);
 
-  return { user: verifiedUser, token };
+  // Do NOT give token here - user must wait for admin approval
+  // Return user info without token
+  return {
+    user: verifiedUser,
+    message:
+      "Email verified. Please wait for admin approval before logging in.",
+  };
 };
 
 // Login Service
+// SECURITY: Token is returned but should be stored securely (AsyncStorage)
+// NEVER log or display the token in UI
 export const loginService = async (email, password) => {
   const user = await findUserByEmail(email);
   if (!user) throw new Error("Invalid email or password");
 
   if (!user.is_verified) throw new Error("Please verify your email first");
 
+  // Check if admin has approved the account
+  if (!user.is_approved)
+    throw new Error("Your account is pending admin approval");
+
   const match = await bcrypt.compare(password, user.password);
   if (!match) throw new Error("Invalid email or password");
 
   const token = generateToken(user);
 
+  // Remove sensitive fields from user object
   const { password: _, ...cleanUser } = user;
 
+  // Return user and token - token goes to secure storage, not UI
   return { user: cleanUser, token };
 };
 
@@ -148,4 +163,26 @@ export const verifyForgotPasswordOTP = async (email, otp) => {
 export const resetPasswordService = async (email, newPassword) => {
   const hash = await bcrypt.hash(newPassword, 10);
   return await updateUserPassword(email, hash);
+};
+
+// Resend OTP - generates new OTP and invalidates old ones
+export const resendOTPService = async (email, purpose) => {
+  // Check if user exists
+  const user = await findUserByEmail(email);
+  if (!user) throw new Error("Email not found");
+
+  // If registration OTP and user already verified, don't allow
+  if (purpose === "registration" && user.is_verified) {
+    throw new Error("Email already verified");
+  }
+
+  // Invalidate old OTPs for this email and purpose
+  await invalidateOldOTPs(email, purpose);
+
+  // Generate and save new OTP
+  const otp = generateOTP();
+  await saveOTP(email, otp, purpose);
+  await sendOTPEmail(email, otp, purpose);
+
+  return true;
 };

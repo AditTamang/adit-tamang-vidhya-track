@@ -80,7 +80,7 @@ const ForgotPassword = () => {
                             <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Enter your Gmail (@gmail.com)"
+                                placeholder="Enter your email address"
                                 placeholderTextColor="#999"
                                 value={email}
                                 onChangeText={setEmail}

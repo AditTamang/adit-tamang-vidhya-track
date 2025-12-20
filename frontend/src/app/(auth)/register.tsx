@@ -32,6 +32,40 @@ const Register = (props: Props) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [passwordWarning, setPasswordWarning] = useState('');
+
+    // Simple check if password is similar to name or email
+    const checkPasswordSimilarity = (pass: string) => {
+        const lowerPass = pass.toLowerCase();
+        const lowerName = fullName.toLowerCase();
+        const lowerEmail = email.toLowerCase().split('@')[0]; // get part before @
+
+        // Check if password contains name or email username
+        if (lowerName && lowerPass.includes(lowerName)) {
+            setPasswordWarning('Warning: Password should not contain your name');
+            return;
+        }
+        if (lowerEmail && lowerPass.includes(lowerEmail)) {
+            setPasswordWarning('Warning: Password should not contain your email');
+            return;
+        }
+        // Check if name or email is in password
+        if (lowerName && lowerName.includes(lowerPass.replace(/[^a-z]/g, ''))) {
+            setPasswordWarning('Warning: Password is too similar to your name');
+            return;
+        }
+        setPasswordWarning('');
+    };
+
+    // Call this when password changes
+    const handlePasswordChange = (text: string) => {
+        setPassword(text);
+        if (text.length >= 3) {
+            checkPasswordSimilarity(text);
+        } else {
+            setPasswordWarning('');
+        }
+    };
 
     const handleRegister = async () => {
         if (!fullName || !email || !password || !confirmPassword) {
@@ -68,7 +102,7 @@ const Register = (props: Props) => {
         setIsLoading(true);
         try {
             const { register } = await import('@/services/authService');
-            
+
             const registerData: any = {
                 name: fullName,
                 email: email,
@@ -100,10 +134,21 @@ const Register = (props: Props) => {
                     ]
                 );
             } else {
-                Alert.alert('Error', response.message || 'Registration failed');
+                // Show clear message for duplicate email
+                if (response.message && response.message.includes('already registered')) {
+                    Alert.alert('Email Already Exists', 'This email is already registered. Please use a different email or login.');
+                } else {
+                    Alert.alert('Error', response.message || 'Registration failed');
+                }
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Registration failed. Please try again.');
+            // Handle duplicate email error from catch block
+            const errorMsg = error.message || '';
+            if (errorMsg.includes('already registered')) {
+                Alert.alert('Email Already Exists', 'This email is already registered. Please use a different email or login.');
+            } else {
+                Alert.alert('Error', errorMsg || 'Registration failed. Please try again.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -332,7 +377,7 @@ const Register = (props: Props) => {
                                 placeholder="Create a password"
                                 placeholderTextColor="#999"
                                 value={password}
-                                onChangeText={setPassword}
+                                onChangeText={handlePasswordChange}
                                 secureTextEntry={!showPassword}
                                 autoCapitalize="none"
                             />
@@ -350,6 +395,9 @@ const Register = (props: Props) => {
                         <Text style={styles.helperText}>
                             Must contain: 1 uppercase, 1 number, 1 special character
                         </Text>
+                        {passwordWarning !== '' && (
+                            <Text style={styles.warningText}>{passwordWarning}</Text>
+                        )}
                     </View>
 
                     {/* Confirm Password Input */}
@@ -523,6 +571,12 @@ const styles = StyleSheet.create({
         color: '#666',
         marginTop: 5,
         fontStyle: 'italic',
+    },
+    warningText: {
+        fontSize: 12,
+        color: '#FF6B00',
+        marginTop: 5,
+        fontWeight: '600',
     },
     registerButton: {
         backgroundColor: '#4CAF50',

@@ -5,6 +5,7 @@ import {
   forgotPasswordService,
   verifyForgotPasswordOTP,
   resetPasswordService,
+  resendOTPService,
 } from "../services/authService.js";
 
 const sendResponse = (res, status, message, data = null) => {
@@ -69,6 +70,10 @@ export const login = async (req, res, next) => {
     ) {
       return sendResponse(res, 401, err.message);
     }
+    // Handle pending admin approval
+    if (err.message === "Your account is pending admin approval") {
+      return sendResponse(res, 403, err.message);
+    }
     next(err);
   }
 };
@@ -106,6 +111,28 @@ export const resetPassword = async (req, res, next) => {
     await resetPasswordService(email, newPassword);
     sendResponse(res, 200, "Password reset successful");
   } catch (err) {
+    next(err);
+  }
+};
+
+// Resend OTP
+export const resendOTP = async (req, res, next) => {
+  try {
+    const { email, purpose } = req.body;
+
+    if (!email || !purpose) {
+      return sendResponse(res, 400, "Email and purpose are required");
+    }
+
+    await resendOTPService(email, purpose);
+    sendResponse(res, 200, "New OTP sent to your email");
+  } catch (err) {
+    if (err.message === "Email not found") {
+      return sendResponse(res, 404, err.message);
+    }
+    if (err.message === "Email already verified") {
+      return sendResponse(res, 400, err.message);
+    }
     next(err);
   }
 };

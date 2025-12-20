@@ -46,7 +46,9 @@ const Login = (props: Props) => {
                 const userRole = user.role;
 
                 // Navigate to appropriate dashboard based on user role
-                if (userRole === 'parent') {
+                if (userRole === 'admin') {
+                    router.replace('/(admin)/dashboard');
+                } else if (userRole === 'parent') {
                     router.replace('/(parent)/dashboard');
                 } else if (userRole === 'teacher') {
                     router.replace('/(teacher)/dashboard');
@@ -55,11 +57,27 @@ const Login = (props: Props) => {
                 } else {
                     router.replace('/(parent)/dashboard'); // Default fallback
                 }
+            } else if (response.status === 403) {
+                // Admin approval pending
+                Alert.alert(
+                    'Account Pending',
+                    'Your account is pending admin approval. Please wait for an admin to approve your account.',
+                    [{ text: 'OK' }]
+                );
             } else {
                 Alert.alert('Error', response.message || 'Invalid credentials');
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Login failed. Please try again.');
+            // Check if it's the admin approval error
+            if (error.message && error.message.includes('pending admin approval')) {
+                Alert.alert(
+                    'Account Pending',
+                    'Your account is pending admin approval. Please wait for an admin to approve your account.',
+                    [{ text: 'OK' }]
+                );
+            } else {
+                Alert.alert('Error', error.message || 'Login failed. Please try again.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -106,7 +124,7 @@ const Login = (props: Props) => {
                             <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Enter your email address)"
+                                placeholder="Enter your email address"
                                 placeholderTextColor="#999"
                                 value={email}
                                 onChangeText={setEmail}
