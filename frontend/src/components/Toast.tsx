@@ -7,7 +7,7 @@ interface ToastProps {
     onHide: () => void;
     type?: 'success' | 'error' | 'info';
 }
-
+//
 const Toast: React.FC<ToastProps> = ({ message, visible, onHide, type = 'info' }) => {
     const [fadeAnim] = useState(new Animated.Value(0));
 
