@@ -6,13 +6,38 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import Toast from '@/components/Toast';
+
 export default function OTPVerification() {
     const router = useRouter();
     const { email, flow } = useLocalSearchParams();
 
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     const [isResending, setIsResending] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
     const inputRefs = useRef<Array<TextInput | null>>([]);
+    const [toast, setToast] = useState({ visible: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToast({ visible: true, message, type });
+    };
+
+    const hideToast = () => {
+        setToast({ ...toast, visible: false });
+    };
+
+    // Timer effect for cooldown
+    React.useEffect(() => {
+        let timer: any;
+        if (cooldown > 0) {
+            timer = setInterval(() => {
+                setCooldown((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => {
+            if (timer) clearInterval(timer);
+        };
+    }, [cooldown]);
 
     const handleChange = (value: string, index: number) => {
         const updated = [...otp];
@@ -27,7 +52,7 @@ export default function OTPVerification() {
     const handleVerify = async () => {
         const code = otp.join("");
         if (code.length !== 6) {
-            Alert.alert("Error", "Enter the 6-digit OTP");
+            showToast("Enter the 6-digit OTP", "error");
             return;
         }
 
@@ -47,33 +72,26 @@ export default function OTPVerification() {
             if (response.status === 200) {
                 if (isRegistrationFlow) {
                     // Registration OTP verified - user must wait for admin approval
-                    Alert.alert(
-                        "Email Verified!",
-                        "Your email has been verified. Please wait for admin approval before you can login.",
-                        [
-                            {
-                                text: 'OK',
-                                onPress: () => {
-                                    // Go back to login page
-                                    router.replace('/login');
-                                }
-                            }
-                        ]
-                    );
+                    showToast("Email Verified! Pending Admin Approval.", "success");
+                    setTimeout(() => {
+                        router.replace('/login');
+                    }, 2000);
                 } else {
                     // Reset password OTP verified - proceed to reset password
-                    Alert.alert("Success", "OTP verified");
-                    router.push({
-                        pathname: "/reset-password",
-                        params: { email }
-                    });
+                    showToast("OTP Verified", "success");
+                    setTimeout(() => {
+                        router.push({
+                            pathname: "/reset-password",
+                            params: { email }
+                        });
+                    }, 1000);
                 }
             } else {
-                Alert.alert("Error", response.message || "Invalid OTP");
+                showToast(response.message || "Invalid OTP", "error");
             }
 
         } catch (err: any) {
-            Alert.alert("Error", err.message || "Failed to verify OTP");
+            showToast(err.message || "Failed to verify OTP", "error");
         }
     };
 
@@ -110,17 +128,25 @@ export default function OTPVerification() {
                     <Ionicons name="arrow-forward" size={20} color="#FFF" />
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={handleResend} disabled={isResending}>
-                    <Text style={[styles.resendText, isResending && { opacity: 0.5 }]}>
-                        {isResending ? "Sending..." : "Resend Code"}
+                <TouchableOpacity onPress={handleResend} disabled={isResending || cooldown > 0}>
+                    <Text style={[styles.resendText, (isResending || cooldown > 0) && { opacity: 0.5 }]}>
+                        {isResending ? "Sending..." : cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend Code"}
                     </Text>
                 </TouchableOpacity>
             </ScrollView>
+            <Toast
+                message={toast.message}
+                visible={toast.visible}
+                onHide={hideToast}
+                type={toast.type}
+            />
         </KeyboardAvoidingView>
     );
 
     // Resend OTP handler
     async function handleResend() {
+        if (cooldown > 0) return;
+
         setIsResending(true);
         try {
             const { resendOTP } = await import('@/services/authService');
@@ -128,14 +154,15 @@ export default function OTPVerification() {
             const response = await resendOTP(email as string, purpose);
 
             if (response.status === 200) {
-                Alert.alert("Success", "New OTP sent to your email!");
+                showToast("New OTP sent!", "success");
+                setCooldown(60); // 60s cooldown
                 // Clear the OTP fields
                 setOtp(["", "", "", "", "", ""]);
             } else {
-                Alert.alert("Error", response.message || "Failed to resend OTP");
+                showToast(response.message || "Failed to resend OTP", "error");
             }
         } catch (err: any) {
-            Alert.alert("Error", err.message || "Failed to resend OTP");
+            showToast(err.message || "Failed to resend OTP", "error");
         } finally {
             setIsResending(false);
         }

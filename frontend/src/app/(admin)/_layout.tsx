@@ -35,10 +35,7 @@ export default function AdminLayout() {
             <Tabs.Screen
                 name="approvals"
                 options={{
-                    title: 'Approvals',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="checkmark-circle" size={size} color={color} />
-                    ),
+                    href: null, // Hide from tab bar but keep accessible via navigation
                 }}
             />
             <Tabs.Screen

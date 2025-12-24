@@ -73,20 +73,44 @@ router.post("/reject-user/:id", authenticate, isAdmin, async (req, res) => {
   }
 });
 
-// Get all users (for admin management)
+// Get all users (with pagination)
 router.get("/users", authenticate, isAdmin, async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT id, name, email, role, phone_number, is_verified, is_approved, created_at 
-       FROM users 
-       WHERE role != 'admin'
-       ORDER BY created_at DESC`
-    );
-    res.json({ status: 200, data: result.rows });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { getAllUsersService } = await import("../services/userService.js");
+    const { users, total } = await getAllUsersService(limit, offset);
+
+    res.json({ 
+        status: 200, 
+        data: {
+            users,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        } 
+    });
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ status: 500, message: "Server error" });
   }
+});
+
+// Get dashboard stats
+router.get("/stats", authenticate, isAdmin, async (req, res) => {
+    try {
+        const { getDashboardStatsService } = await import("../services/userService.js");
+        const stats = await getDashboardStatsService();
+        res.json({ status: 200, data: stats });
+    } catch (error) {
+        console.error("Error fetching stats:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    }
 });
 
 export default router;

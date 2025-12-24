@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -7,19 +8,34 @@ import { COLORS } from '@/constants/Colors';
 export default function AdminDashboard() {
     const router = useRouter();
     const [userName, setUserName] = useState('Admin');
+    const [stats, setStats] = useState({ totalUsers: 0, pendingUsers: 0 });
 
     useEffect(() => {
-        const loadUser = async () => {
+        const loadData = async () => {
             try {
                 const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+                const token = await AsyncStorage.getItem('authToken');
                 const userData = await AsyncStorage.getItem('userData');
+
                 if (userData) {
                     const user = JSON.parse(userData);
                     setUserName(user.name || 'Admin');
                 }
-            } catch (e) { }
+
+                // Fetch Stats
+                const { API_BASE_URL } = require('@/services/api');
+                const res = await fetch(`${API_BASE_URL}/api/admin/stats`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.status === 200) {
+                    setStats(data.data);
+                }
+            } catch (e) {
+                console.error("Dashboard Load Error: ", e);
+            }
         };
-        loadUser();
+        loadData();
     }, []);
 
     return (
@@ -38,12 +54,12 @@ export default function AdminDashboard() {
                 <View style={styles.statsRow}>
                     <View style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
                         <Ionicons name="people" size={30} color="#1976D2" />
-                        <Text style={styles.statNumber}>--</Text>
+                        <Text style={styles.statNumber}>{stats.totalUsers}</Text>
                         <Text style={styles.statLabel}>Total Users</Text>
                     </View>
                     <View style={[styles.statCard, { backgroundColor: '#FFF3E0' }]}>
                         <Ionicons name="time" size={30} color="#F57C00" />
-                        <Text style={styles.statNumber}>--</Text>
+                        <Text style={styles.statNumber}>{stats.pendingUsers}</Text>
                         <Text style={styles.statLabel}>Pending</Text>
                     </View>
                 </View>

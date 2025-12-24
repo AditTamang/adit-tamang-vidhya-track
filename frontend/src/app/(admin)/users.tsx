@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { COLORS } from '@/constants/Colors';
 import { API_BASE_URL } from '@/services/api';
 
@@ -17,21 +18,31 @@ export default function AdminUsers() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<string>('all');
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
-    useEffect(() => {
-        fetchUsers();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            fetchUsers();
+        }, [page])
+    );
 
     const fetchUsers = async () => {
         try {
             const AsyncStorage = require('@react-native-async-storage/async-storage').default;
             const token = await AsyncStorage.getItem('authToken');
-            const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
+
+            // Pass pagination params
+            const res = await fetch(`${API_BASE_URL}/api/admin/users?page=${page}&limit=10`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
-            if (data.status === 200) {
-                setUsers(data.data || []);
+
+            if (data.status === 200 && data.data) {
+                // New response structure: data.data.users
+                setUsers(data.data.users || []);
+                setTotalPages(data.data.meta?.totalPages || 1);
             }
         } catch (e) {
             console.error('Error fetching users:', e);
@@ -40,7 +51,50 @@ export default function AdminUsers() {
         }
     };
 
+    const handleApprove = async (id: number) => {
+        try {
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            const token = await AsyncStorage.getItem('authToken');
+            const res = await fetch(`${API_BASE_URL}/api/admin/approve-user/${id}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.status === 200) {
+                fetchUsers(); // Refresh list
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleReject = async (id: number) => {
+        try {
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            const token = await AsyncStorage.getItem('authToken');
+            const res = await fetch(`${API_BASE_URL}/api/admin/reject-user/${id}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.status === 200) {
+                fetchUsers(); // Refresh list
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const filteredUsers = filter === 'all' ? users : users.filter(u => u.role === filter);
+
+    const getRoleColor = (role: string) => {
+        switch (role) {
+            case 'student': return '#2196F3';
+            case 'parent': return '#9C27B0';
+            case 'teacher': return '#FF5722';
+            default: return '#607D8B';
+        }
+    };
 
     const renderUser = ({ item }: { item: User }) => (
         <View style={styles.userCard}>
@@ -56,18 +110,19 @@ export default function AdminUsers() {
                         {item.is_approved ? 'Approved' : 'Pending'}
                     </Text>
                 </View>
+                {!item.is_approved && (
+                    <View style={styles.actionButtons}>
+                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#4CAF50' }]} onPress={() => handleApprove(item.id)}>
+                            <Text style={styles.actionBtnText}>Approve</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#F44336' }]} onPress={() => handleReject(item.id)}>
+                            <Text style={styles.actionBtnText}>Reject</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
         </View>
     );
-
-    const getRoleColor = (role: string) => {
-        switch (role) {
-            case 'student': return '#2196F3';
-            case 'parent': return '#9C27B0';
-            case 'teacher': return '#FF5722';
-            default: return '#607D8B';
-        }
-    };
 
     if (loading) {
         return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
@@ -89,7 +144,35 @@ export default function AdminUsers() {
                 ))}
             </View>
 
-            <FlatList data={filteredUsers} keyExtractor={item => item.id.toString()} renderItem={renderUser} contentContainerStyle={{ padding: 20 }} />
+            <FlatList
+                data={filteredUsers}
+                keyExtractor={item => item.id.toString()}
+                renderItem={renderUser}
+                contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+                ListFooterComponent={
+                    <View style={styles.paginationContainer}>
+                        <TouchableOpacity
+                            style={[styles.pageBtn, page === 1 && styles.disabledBtn]}
+                            disabled={page === 1}
+                            onPress={() => setPage(p => Math.max(1, p - 1))}
+                        >
+                            <Ionicons name="chevron-back" size={20} color={page === 1 ? "#ccc" : "#333"} />
+                            <Text style={[styles.pageBtnText, page === 1 && { color: '#ccc' }]}>Prev</Text>
+                        </TouchableOpacity>
+
+                        <Text style={styles.pageInfo}>Page {page} of {totalPages}</Text>
+
+                        <TouchableOpacity
+                            style={[styles.pageBtn, page === totalPages && styles.disabledBtn]}
+                            disabled={page === totalPages}
+                            onPress={() => setPage(p => Math.min(totalPages, p + 1))}
+                        >
+                            <Text style={[styles.pageBtnText, page === totalPages && { color: '#ccc' }]}>Next</Text>
+                            <Ionicons name="chevron-forward" size={20} color={page === totalPages ? "#ccc" : "#333"} />
+                        </TouchableOpacity>
+                    </View>
+                }
+            />
         </View>
     );
 }
@@ -112,5 +195,12 @@ const styles = StyleSheet.create({
     userEmail: { fontSize: 13, color: '#666', marginTop: 2 },
     badges: { flexDirection: 'row', gap: 8, marginTop: 8 },
     badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, fontSize: 11, color: '#fff', overflow: 'hidden', textTransform: 'capitalize' },
+    paginationContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20, gap: 15 },
+    pageBtn: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: '#fff', borderRadius: 8, elevation: 2 },
+    disabledBtn: { backgroundColor: '#f5f5f5', elevation: 0 },
+    pageBtnText: { marginHorizontal: 5, fontSize: 14, fontWeight: '600', color: '#333' },
+    pageInfo: { fontSize: 14, fontWeight: '600', color: '#666' },
+    actionButtons: { flexDirection: 'row', gap: 10, marginTop: 10 },
+    actionBtn: { paddingHorizontal: 15, paddingVertical: 6, borderRadius: 8 },
+    actionBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 });
-

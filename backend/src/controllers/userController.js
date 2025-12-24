@@ -31,8 +31,21 @@ export const createUser = async (req, res, next) => {
 // Get All Users
 export const getAllUsers = async (req, res, next) => {
   try {
-    const users = await getAllUsersService();
-    sendResponse(res, 200, "Users retrieved successfully", users);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { users, total } = await getAllUsersService(limit, offset);
+    
+    sendResponse(res, 200, "Users retrieved successfully", {
+        users,
+        meta: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        }
+    });
   } catch (err) {
     next(err);
   }

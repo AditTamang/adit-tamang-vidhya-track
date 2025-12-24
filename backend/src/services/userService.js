@@ -1,11 +1,28 @@
 import bcrypt from "bcrypt";
 import pool from "../config/dbConnection.js";
 
-export const getAllUsersService = async () => {
-  const result = await pool.query(
-    "SELECT id, name, email, role, status, phone_number, is_verified, created_at, updated_at FROM users ORDER BY created_at DESC"
+export const getAllUsersService = async (limit, offset) => {
+  const usersResult = await pool.query(
+    "SELECT id, name, email, role, status, phone_number, is_verified, is_approved, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+    [limit, offset]
   );
-  return result.rows;
+  
+  const countResult = await pool.query("SELECT COUNT(*) FROM users");
+  
+  return {
+    users: usersResult.rows,
+    total: parseInt(countResult.rows[0].count)
+  };
+};
+
+export const getDashboardStatsService = async () => {
+    const totalUsersResult = await pool.query("SELECT COUNT(*) FROM users");
+    const pendingUsersResult = await pool.query("SELECT COUNT(*) FROM users WHERE is_approved = FALSE AND role != 'admin'");
+
+    return {
+        totalUsers: parseInt(totalUsersResult.rows[0].count),
+        pendingUsers: parseInt(pendingUsersResult.rows[0].count)
+    };
 };
 
 export const getUserByIdService = async (id) => {

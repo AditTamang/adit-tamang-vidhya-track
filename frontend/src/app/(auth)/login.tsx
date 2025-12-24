@@ -13,6 +13,7 @@ import {
     Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from '@/components/Toast';
 
 type Props = {};
 
@@ -23,18 +24,23 @@ const Login = (props: Props) => {
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [toast, setToast] = useState({ visible: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToast({ visible: true, message, type });
+    };
+
+    const hideToast = () => {
+        setToast({ ...toast, visible: false });
+    };
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
+            showToast('Please fill in all fields', 'error');
             return;
         }
 
-        // Validate Gmail email
-        if (!email.endsWith('@gmail.com')) {
-            Alert.alert('Error', 'Email must be a Gmail address (@gmail.com)');
-            return;
-        }
+        // Email validation removed to allow all valid emails as per requirements
 
         setIsLoading(true);
         try {
@@ -45,38 +51,37 @@ const Login = (props: Props) => {
                 const user = response.data.user;
                 const userRole = user.role;
 
-                // Navigate to appropriate dashboard based on user role
-                if (userRole === 'admin') {
-                    router.replace('/(admin)/dashboard');
-                } else if (userRole === 'parent') {
-                    router.replace('/(parent)/dashboard');
-                } else if (userRole === 'teacher') {
-                    router.replace('/(teacher)/dashboard');
-                } else if (userRole === 'student') {
-                    router.replace('/(student)/dashboard');
-                } else {
-                    router.replace('/(parent)/dashboard'); // Default fallback
-                }
+                showToast('Login Successful', 'success');
+
+                // Delay navigation slightly to show success message
+                setTimeout(() => {
+                    // Navigate to appropriate dashboard based on user role
+                    if (userRole === 'admin') {
+                        router.replace('/(admin)/dashboard');
+                    } else if (userRole === 'parent') {
+                        router.replace('/(parent)/dashboard');
+                    } else if (userRole === 'teacher') {
+                        router.replace('/(teacher)/dashboard');
+                    } else if (userRole === 'student') {
+                        router.replace('/(student)/dashboard');
+                    } else {
+                        router.replace('/(parent)/dashboard'); // Default fallback
+                    }
+                }, 1000);
             } else if (response.status === 403) {
                 // Admin approval pending
                 Alert.alert(
-                    'Account Pending',
-                    'Your account is pending admin approval. Please wait for an admin to approve your account.',
-                    [{ text: 'OK' }]
+                    'Your account is pending admin approval. Please wait for an admin to approve your account.'
                 );
             } else {
-                Alert.alert('Error', response.message || 'Invalid credentials');
+                showToast(response.message || 'Invalid credentials', 'error');
             }
         } catch (error: any) {
             // Check if it's the admin approval error
             if (error.message && error.message.includes('pending admin approval')) {
-                Alert.alert(
-                    'Account Pending',
-                    'Your account is pending admin approval. Please wait for an admin to approve your account.',
-                    [{ text: 'OK' }]
-                );
+                showToast('Your account is pending admin approval.', 'info');
             } else {
-                Alert.alert('Error', error.message || 'Login failed. Please try again.');
+                showToast(error.message || 'Login failed. Please try again.', 'error');
             }
         } finally {
             setIsLoading(false);
@@ -193,7 +198,6 @@ const Login = (props: Props) => {
                         <Ionicons name="arrow-forward" size={20} color="#fff" />
                     </TouchableOpacity>
 
-                    {/* Sign Up Link */}
                     <View style={styles.signUpContainer}>
                         <Text style={styles.signUpText}>Don't have an account? </Text>
                         <Link href="/register" asChild>
@@ -204,6 +208,12 @@ const Login = (props: Props) => {
                     </View>
                 </View>
             </ScrollView>
+            <Toast
+                message={toast.message}
+                visible={toast.visible}
+                onHide={hideToast}
+                type={toast.type}
+            />
         </KeyboardAvoidingView>
     );
 };
