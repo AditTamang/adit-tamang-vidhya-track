@@ -172,7 +172,7 @@ export default function OTPVerification() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#D1D5DB" },
     content: { padding: 25 },
-    otpImage: { width: 180, height: 180, alignSelf: "center", marginVertical: 20 },
+    otpImage: { width: 180, height: 50, alignSelf: "center", marginVertical: 80 },
     title: { fontSize: 28, fontWeight: "700", textAlign: "center" },
     subtitle: { textAlign: "center", color: "#444", marginTop: 5 },
     otpContainer: { flexDirection: "row", justifyContent: "space-between", marginTop: 30 },

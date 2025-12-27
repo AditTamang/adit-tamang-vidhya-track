@@ -43,7 +43,7 @@ const generateStudentCode = async () => {
   return code;
 };
 
-// REGISTER (Full Flow)
+// REGISTER
 export const registerService = async (
   name,
   email,
@@ -115,8 +115,7 @@ export const verifyRegistrationOTP = async (email, otp) => {
 };
 
 // Login Service
-// SECURITY: Token is returned but should be stored securely (AsyncStorage)
-// NEVER log or display the token in UI
+// SECURITY: Token is returned but stored securely (AsyncStorage)
 export const loginService = async (email, password) => {
   const user = await findUserByEmail(email);
   if (!user) throw new Error("Invalid email or password");
@@ -135,7 +134,7 @@ export const loginService = async (email, password) => {
   // Remove sensitive fields from user object
   const { password: _, ...cleanUser } = user;
 
-  // Return user and token - token goes to secure storage, not UI
+  // Return user and token - token goes to secure storage
   return { user: cleanUser, token };
 };
 

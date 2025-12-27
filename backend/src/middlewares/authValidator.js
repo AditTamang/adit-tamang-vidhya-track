@@ -2,13 +2,7 @@ import Joi from "joi";
 
 const registerSchema = Joi.object({
   name: Joi.string().min(3).max(100).required(),
-  email: Joi.string()
-    .email()
-    .pattern(/@gmail\.com$/)
-    .required()
-    .messages({
-      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
-    }),
+  email: Joi.string().email().required(),
   phone_number: Joi.string()
     .pattern(/^[0-9]{10,15}$/)
     .required()
@@ -38,13 +32,7 @@ const registerSchema = Joi.object({
 });
 
 const verifyOTPSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .pattern(/@gmail\.com$/)
-    .required()
-    .messages({
-      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
-    }),
+  email: Joi.string().email().required(),
   otp: Joi.string()
     .length(6)
     .pattern(/^[0-9]+$/)
@@ -56,34 +44,16 @@ const verifyOTPSchema = Joi.object({
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .pattern(/@gmail\.com$/)
-    .required()
-    .messages({
-      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
-    }),
+  email: Joi.string().email().required(),
   password: Joi.string().required(),
 });
 
 const forgotPasswordSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .pattern(/@gmail\.com$/)
-    .required()
-    .messages({
-      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
-    }),
+  email: Joi.string().email().required(),
 });
 
 const resetPasswordSimpleSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .pattern(/@gmail\.com$/)
-    .required()
-    .messages({
-      "string.pattern.base": "Email must be a Gmail address (@gmail.com)",
-    }),
+  email: Joi.string().email().required(),
   newPassword: Joi.string()
     .min(6)
     .pattern(/^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).*$/)

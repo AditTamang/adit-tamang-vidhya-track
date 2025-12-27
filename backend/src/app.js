@@ -9,6 +9,9 @@ import userRoutes from "./routes/userRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import parentStudentRoutes from "./routes/parentStudentRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import classRoutes from "./routes/classRoutes.js";
+import gradeRoutes from "./routes/gradeRoutes.js";
+import scheduleRoutes from "./routes/scheduleRoutes.js";
 
 dotenv.config();
 
@@ -40,6 +43,9 @@ app.use("/api", userRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/parent-student", parentStudentRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api", classRoutes);
+app.use("/api/grades", gradeRoutes);
+app.use("/api/schedule", scheduleRoutes);
 
 // 404 Handler
 app.use((req, res) => {

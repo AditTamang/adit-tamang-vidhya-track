@@ -59,10 +59,6 @@ const ForgotPassword = () => {
 
                     <View style={styles.logoContainer}>
                         <Image source={require("../../../assets/logo.png")} style={styles.logo} resizeMode="contain" />
-                        <Text style={styles.logoText}>
-                            <Text style={styles.logoTextGreen}>Vidhya</Text>
-                            <Text style={styles.logoTextBlack}>Track</Text>
-                        </Text>
                     </View>
 
                     <Text style={styles.title}>Forgot Password?</Text>
@@ -112,8 +108,7 @@ const styles = StyleSheet.create({
     backButton: { flexDirection: "row", alignItems: "center", marginBottom: 30 },
     backButtonText: { marginLeft: 8, fontSize: 14, fontWeight: "500" },
     logoContainer: { alignItems: "center", marginBottom: 20 },
-    logo: { width: 80, height: 80 },
-    logoText: { fontSize: 28, fontWeight: "bold" },
+    logo: { width: 180, height: 100, alignSelf: "center", marginVertical: 3 },
     logoTextGreen: { color: "#4CAF50" },
     logoTextBlack: { color: "#000" },
     title: { fontSize: 28, fontWeight: "bold", textAlign: "center" },

@@ -21,7 +21,6 @@ const Login = (props: Props) => {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [toast, setToast] = useState({ visible: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
@@ -167,18 +166,8 @@ const Login = (props: Props) => {
                         </View>
                     </View>
 
-                    {/* Remember Me & Forgot Password */}
+                    {/* Forgot Password */}
                     <View style={styles.optionsContainer}>
-                        <TouchableOpacity
-                            style={styles.rememberMeContainer}
-                            onPress={() => setRememberMe(!rememberMe)}
-                        >
-                            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                                {rememberMe && <Ionicons name="checkmark" size={14} color="#fff" />}
-                            </View>
-                            <Text style={styles.rememberMeText}>Remember me</Text>
-                        </TouchableOpacity>
-
                         <Link href="/forgot-password" asChild>
                             <TouchableOpacity>
                                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
@@ -327,10 +316,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    checkboxChecked: {
-        backgroundColor: '#4CAF50',
-        borderColor: '#4CAF50',
-    },
     rememberMeText: {
         fontSize: 13,
         color: '#000',
@@ -339,15 +324,16 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#000',
         fontWeight: '600',
+        marginLeft: 200
     },
     signInButton: {
         backgroundColor: '#4CAF50',
-        borderRadius: 12,
+        borderRadius: 14,
         height: 50,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 20,
+        marginBottom: 17,
     },
     signInButtonDisabled: {
         opacity: 0.6,

@@ -48,6 +48,15 @@ export default function AdminLayout() {
                 }}
             />
             <Tabs.Screen
+                name="classes"
+                options={{
+                    title: 'Classes',
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="school" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tabs.Screen
                 name="profile"
                 options={{
                     title: 'Profile',

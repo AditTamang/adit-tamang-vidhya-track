@@ -1,6 +1,24 @@
 import pool from "../config/dbConnection.js";
 
-// Request link
+// Request link by Student Code
+export const requestLinkByCodeService = async (parentId, studentCode) => {
+  // Find student by code
+  const student = await pool.query(
+    `SELECT id FROM students WHERE student_code = $1`,
+    [studentCode]
+  );
+
+  if (student.rowCount === 0) {
+    throw new Error("Invalid Student Code. Please check and try again.");
+  }
+
+  const studentId = student.rows[0].id;
+
+  // Reuse existing link service
+  return await requestLinkService(parentId, studentId);
+};
+
+// Request link (ID based)
 export const requestLinkService = async (parentId, studentId) => {
   // Validate student exists
   const studentCheck = await pool.query(
@@ -20,14 +38,19 @@ export const requestLinkService = async (parentId, studentId) => {
     throw new Error("Parent not found");
   }
 
-  // Check duplicate pending request
+  // Check duplicate pending or approved request
   const duplicate = await pool.query(
     `SELECT * FROM parent_student_link 
-     WHERE parent_id = $1 AND student_id = $2 AND status = 'pending'`,
+     WHERE parent_id = $1 AND student_id = $2 
+     AND (status = 'pending' OR status = 'approved')`,
     [parentId, studentId]
   );
 
   if (duplicate.rowCount > 0) {
+    const status = duplicate.rows[0].status;
+    if (status === 'approved') {
+        throw new Error("You are already linked to this student");
+    }
     throw new Error("Link request already sent");
   }
 

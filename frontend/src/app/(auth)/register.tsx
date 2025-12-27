@@ -27,7 +27,7 @@ const Register = (props: Props) => {
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [studentCode, setStudentCode] = useState('');
+
     const [className, setClassName] = useState('');
     const [section, setSection] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -90,7 +90,7 @@ const Register = (props: Props) => {
         if (!passwordRegex.test(password)) {
             Alert.alert(
                 'Error',
-                'Password must contain at least one uppercase letter, one number, and one special character'
+                'Password must contain at least one uppercase letter,number, special character'
             );
             return;
         }
@@ -100,10 +100,7 @@ const Register = (props: Props) => {
             return;
         }
 
-        if (selectedRole === 'parent' && !studentCode) {
-            showToast('Please enter student code', 'error');
-            return;
-        }
+
 
         setIsLoading(true);
         try {
@@ -171,10 +168,6 @@ const Register = (props: Props) => {
                             style={styles.logo}
                             resizeMode="contain"
                         />
-                        <Text style={styles.logoText}>
-                            <Text style={styles.logoTextGreen}>Vidhya</Text>
-                            <Text style={styles.logoTextBlack}>Track</Text>
-                        </Text>
                     </View>
 
                     {/* Title */}
@@ -291,179 +284,140 @@ const Register = (props: Props) => {
                                 autoComplete="email"
                             />
                         </View>
-                        <Text style={styles.helperText}>
-                            Only Gmail addresses are allowed
-                        </Text>
-                        {/* Email Input */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Email Address</Text>
-                            <View style={styles.inputContainer}>
-                                <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Enter your email address"
-                                    placeholderTextColor="#999"
-                                    value={email}
-                                    onChangeText={setEmail}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    autoComplete="email"
-                                />
-                            </View>
-                        </View>
+                    </View>
 
-                        {/* Phone Input */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Phone Number</Text>
-                            <View style={styles.inputContainer}>
-                                <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Enter your phone number"
-                                    placeholderTextColor="#999"
-                                    value={phone}
-                                    onChangeText={setPhone}
-                                    keyboardType="phone-pad"
-                                />
-                            </View>
+                    {/* Phone Input */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Phone Number</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Enter your phone number"
+                                placeholderTextColor="#999"
+                                value={phone}
+                                onChangeText={setPhone}
+                                keyboardType="phone-pad"
+                            />
                         </View>
+                    </View>
 
-                        {/* Student Code (for Parents only) */}
-                        {selectedRole === 'parent' && (
+
+
+                    {/* Class and Section (for Students only) */}
+                    {selectedRole === 'student' && (
+                        <>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Student Code</Text>
+                                <Text style={styles.label}>Class</Text>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="key-outline" size={20} color="#666" style={styles.inputIcon} />
+                                    <Ionicons name="school-outline" size={20} color="#666" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Enter student code"
+                                        placeholder="Enter your class (e.g., 10, 11, 12)"
                                         placeholderTextColor="#999"
-                                        value={studentCode}
-                                        onChangeText={setStudentCode}
+                                        value={className}
+                                        onChangeText={setClassName}
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Section</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="people-outline" size={20} color="#666" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter your section (e.g., A, B, C)"
+                                        placeholderTextColor="#999"
+                                        value={section}
+                                        onChangeText={setSection}
                                         autoCapitalize="characters"
                                     />
                                 </View>
-                                <Text style={styles.helperText}>
-                                    Enter the unique code provided by the school
-                                </Text>
                             </View>
-                        )}
+                        </>
+                    )}
 
-                        {/* Class and Section (for Students only) */}
-                        {selectedRole === 'student' && (
-                            <>
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>Class</Text>
-                                    <View style={styles.inputContainer}>
-                                        <Ionicons name="school-outline" size={20} color="#666" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="Enter your class (e.g., 10, 11, 12)"
-                                            placeholderTextColor="#999"
-                                            value={className}
-                                            onChangeText={setClassName}
-                                        />
-                                    </View>
-                                </View>
-
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>Section</Text>
-                                    <View style={styles.inputContainer}>
-                                        <Ionicons name="people-outline" size={20} color="#666" style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="Enter your section (e.g., A, B, C)"
-                                            placeholderTextColor="#999"
-                                            value={section}
-                                            onChangeText={setSection}
-                                            autoCapitalize="characters"
-                                        />
-                                    </View>
-                                </View>
-                            </>
-                        )}
-
-                        {/* Password Input */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Password</Text>
-                            <View style={styles.inputContainer}>
-                                <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Create a password"
-                                    placeholderTextColor="#999"
-                                    value={password}
-                                    onChangeText={handlePasswordChange}
-                                    secureTextEntry={!showPassword}
-                                    autoCapitalize="none"
+                    {/* Password Input */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Password</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Create a password"
+                                placeholderTextColor="#999"
+                                value={password}
+                                onChangeText={handlePasswordChange}
+                                secureTextEntry={!showPassword}
+                                autoCapitalize="none"
+                            />
+                            <TouchableOpacity
+                                onPress={() => setShowPassword(!showPassword)}
+                                style={styles.eyeIcon}
+                            >
+                                <Ionicons
+                                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                                    size={20}
+                                    color="#666"
                                 />
-                                <TouchableOpacity
-                                    onPress={() => setShowPassword(!showPassword)}
-                                    style={styles.eyeIcon}
-                                >
-                                    <Ionicons
-                                        name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                                        size={20}
-                                        color="#666"
-                                    />
-                                </TouchableOpacity>
-                            </View>
-                            <Text style={styles.helperText}>
-                                Must contain: 1 uppercase, 1 number, 1 special character
-                            </Text>
-                            {passwordWarning !== '' && (
-                                <Text style={styles.warningText}>{passwordWarning}</Text>
-                            )}
+                            </TouchableOpacity>
                         </View>
+                        <Text style={styles.helperText}>
+                            Must contain: 1 uppercase, 1 number, 1 special character
+                        </Text>
+                        {passwordWarning !== '' && (
+                            <Text style={styles.warningText}>{passwordWarning}</Text>
+                        )}
+                    </View>
 
-                        {/* Confirm Password Input */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Confirm Password</Text>
-                            <View style={styles.inputContainer}>
-                                <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Confirm your password"
-                                    placeholderTextColor="#999"
-                                    value={confirmPassword}
-                                    onChangeText={setConfirmPassword}
-                                    secureTextEntry={!showConfirmPassword}
-                                    autoCapitalize="none"
+                    {/* Confirm Password Input */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Confirm Password</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Confirm your password"
+                                placeholderTextColor="#999"
+                                value={confirmPassword}
+                                onChangeText={setConfirmPassword}
+                                secureTextEntry={!showConfirmPassword}
+                                autoCapitalize="none"
+                            />
+                            <TouchableOpacity
+                                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                                style={styles.eyeIcon}
+                            >
+                                <Ionicons
+                                    name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                                    size={20}
+                                    color="#666"
                                 />
-                                <TouchableOpacity
-                                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    style={styles.eyeIcon}
-                                >
-                                    <Ionicons
-                                        name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
-                                        size={20}
-                                        color="#666"
-                                    />
-                                </TouchableOpacity>
-                            </View>
+                            </TouchableOpacity>
                         </View>
+                    </View>
 
-                        {/* Register Button */}
-                        <TouchableOpacity
-                            style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
-                            onPress={handleRegister}
-                            disabled={isLoading}
-                        >
-                            <Text style={styles.registerButtonText}>
-                                {isLoading ? 'Creating Account...' : 'Sign Up'}
-                            </Text>
-                            <Ionicons name="arrow-forward" size={20} color="#fff" />
-                        </TouchableOpacity>
+                    {/* Register Button */}
+                    <TouchableOpacity
+                        style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
+                        onPress={handleRegister}
+                        disabled={isLoading}
+                    >
+                        <Text style={styles.registerButtonText}>
+                            {isLoading ? 'Creating Account...' : 'Sign Up'}
+                        </Text>
+                        <Ionicons name="arrow-forward" size={20} color="#fff" />
+                    </TouchableOpacity>
 
-                        {/* Sign In Link */}
-                        <View style={styles.signInContainer}>
-                            <Text style={styles.signInText}>Already have an account? </Text>
-                            <Link href="/login" asChild>
-                                <TouchableOpacity>
-                                    <Text style={styles.signInLink}>Sign in</Text>
-                                </TouchableOpacity>
-                            </Link>
-                        </View>
+                    {/* Sign In Link */}
+                    <View style={styles.signInContainer}>
+                        <Text style={styles.signInText}>Already have an account? </Text>
+                        <Link href="/login" asChild>
+                            <TouchableOpacity>
+                                <Text style={styles.signInLink}>Sign in</Text>
+                            </TouchableOpacity>
+                        </Link>
                     </View>
                 </View>
             </ScrollView>
@@ -473,7 +427,7 @@ const Register = (props: Props) => {
                 onHide={hideToast}
                 type={toast.type}
             />
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingView >
     );
 };
 
@@ -496,13 +450,9 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     logo: {
-        width: 70,
+        width: 280,
         height: 70,
-        marginBottom: 8,
-    },
-    logoText: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        marginBottom: 2,
     },
     logoTextGreen: {
         color: '#4CAF50',
@@ -590,7 +540,7 @@ const styles = StyleSheet.create({
         padding: 5,
     },
     helperText: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#666',
         marginTop: 5,
         fontStyle: 'italic',

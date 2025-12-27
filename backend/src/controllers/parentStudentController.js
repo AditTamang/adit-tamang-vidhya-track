@@ -2,7 +2,32 @@ import {
   requestLinkService,
   approveLinkService,
   getLinkedStudentsService,
+  requestLinkByCodeService,
 } from "../services/parentStudentService.js";
+
+export const requestLinkByCodeController = async (req, res) => {
+  try {
+    const parentId = req.user.id;
+    const { studentCode } = req.body;
+
+    if (!studentCode) {
+      return res
+        .status(400)
+        .json({ status: 400, message: "studentCode is required" });
+    }
+
+    const result = await requestLinkByCodeService(parentId, studentCode);
+
+    res.status(201).json({
+      status: 201,
+      message: "Link request sent successfully",
+      data: result,
+    });
+  } catch (err) {
+    // Return friendly error message
+    res.status(400).json({ status: 400, message: err.message });
+  }
+};
 
 export const requestLinkController = async (req, res) => {
   try {
