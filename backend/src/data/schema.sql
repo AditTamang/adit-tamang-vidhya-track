@@ -1,9 +1,57 @@
 -- ============================================
 -- VIDHYATRACK DATABASE SCHEMA
--- Run this SQL in your PostgreSQL database
 -- ============================================
 
--- Classes Table
+-- 1. Users & Authentication
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone_number VARCHAR(15),
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'student',
+    is_verified BOOLEAN DEFAULT FALSE,
+    is_approved BOOLEAN DEFAULT FALSE,
+    profile_image TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS otps (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(100) NOT NULL,
+    otp VARCHAR(6) NOT NULL,
+    purpose VARCHAR(50) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 2. User Roles
+CREATE TABLE IF NOT EXISTS students (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    student_code VARCHAR(20) UNIQUE,
+    class VARCHAR(20),
+    section VARCHAR(10),
+    roll_number VARCHAR(20),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS parents (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS teachers (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    subject VARCHAR(100),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 3. Academic Structure
 CREATE TABLE IF NOT EXISTS classes (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
@@ -12,7 +60,6 @@ CREATE TABLE IF NOT EXISTS classes (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Sections Table
 CREATE TABLE IF NOT EXISTS sections (
     id SERIAL PRIMARY KEY,
     name VARCHAR(10) NOT NULL,
@@ -22,7 +69,17 @@ CREATE TABLE IF NOT EXISTS sections (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Grades Table
+-- 4. Relationships & Records
+CREATE TABLE IF NOT EXISTS parent_student_links (
+    id SERIAL PRIMARY KEY,
+    parent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'pending', -- pending, approved, rejected
+    approved_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(parent_id, student_id)
+);
+
 CREATE TABLE IF NOT EXISTS grades (
     id SERIAL PRIMARY KEY,
     student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -36,7 +93,6 @@ CREATE TABLE IF NOT EXISTS grades (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Schedules / Events Table
 CREATE TABLE IF NOT EXISTS schedules (
     id SERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
@@ -50,42 +106,10 @@ CREATE TABLE IF NOT EXISTS schedules (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Parent-Student Links Table (if not exists)
-CREATE TABLE IF NOT EXISTS parent_student_links (
-    id SERIAL PRIMARY KEY,
-    parent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    status VARCHAR(20) DEFAULT 'pending',
-    approved_by INTEGER REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(parent_id, student_id)
-);
-
--- Sample Data for Testing
--- Insert some classes
-INSERT INTO classes (name, description) VALUES 
-('Grade 1', 'First grade students'),
-('Grade 2', 'Second grade students'),
-('Grade 3', 'Third grade students'),
-('Grade 4', 'Fourth grade students'),
-('Grade 5', 'Fifth grade students'),
-('Grade 6', 'Sixth grade students'),
-('Grade 7', 'Seventh grade students'),
-('Grade 8', 'Eighth grade students'),
-('Grade 9', 'Ninth grade students'),
-('Grade 10', 'Tenth grade students')
-ON CONFLICT DO NOTHING;
-
--- Insert some sections
-INSERT INTO sections (name, class_id) VALUES 
-('A', 1), ('B', 1),
-('A', 2), ('B', 2),
-('A', 3), ('B', 3),
-('A', 4), ('B', 4),
-('A', 5), ('B', 5),
-('A', 6), ('B', 6),
-('A', 7), ('B', 7),
-('A', 8), ('B', 8),
-('A', 9), ('B', 9),
-('A', 10), ('B', 10)
-ON CONFLICT DO NOTHING;
+-- 5. Indexes
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_otp_email_purpose ON otps(email, purpose, is_used, expires_at);
+CREATE INDEX IF NOT EXISTS idx_parent_student_links_parent ON parent_student_links(parent_id);
+CREATE INDEX IF NOT EXISTS idx_parent_student_links_student ON parent_student_links(student_id);
+CREATE INDEX IF NOT EXISTS idx_parent_student_links_status ON parent_student_links(status);

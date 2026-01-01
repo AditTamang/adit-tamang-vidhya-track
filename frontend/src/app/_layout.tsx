@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 export default function RootLayout() {
   const segments = useSegments();
@@ -45,9 +46,11 @@ export default function RootLayout() {
   }, [segments, isMounted]);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="auto" />
-    </SafeAreaView>
+    <LanguageProvider>
+      <SafeAreaView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }} />
+        <StatusBar style="auto" />
+      </SafeAreaView>
+    </LanguageProvider>
   );
 }

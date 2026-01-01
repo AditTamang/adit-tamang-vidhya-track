@@ -105,7 +105,6 @@ export const verifyRegistrationOTP = async (email, otp) => {
 
   const verifiedUser = await verifyUserEmail(email);
 
-  // Do NOT give token here - user must wait for admin approval
   // Return user info without token
   return {
     user: verifiedUser,
@@ -115,7 +114,6 @@ export const verifyRegistrationOTP = async (email, otp) => {
 };
 
 // Login Service
-// SECURITY: Token is returned but stored securely (AsyncStorage)
 export const loginService = async (email, password) => {
   const user = await findUserByEmail(email);
   if (!user) throw new Error("Invalid email or password");

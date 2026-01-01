@@ -17,13 +17,22 @@ export const getAllUsersService = async (limit, offset) => {
 
 export const getDashboardStatsService = async () => {
     const totalUsersResult = await pool.query("SELECT COUNT(*) FROM users");
-    const pendingUsersResult = await pool.query("SELECT COUNT(*) FROM users WHERE is_approved = FALSE AND role != 'admin'");
+    const pendingUsersResult = await pool.query(
+        "SELECT COUNT(*) FROM users WHERE is_approved = FALSE AND is_verified = TRUE AND role != 'admin'"
+    );
+    const teachersResult = await pool.query("SELECT COUNT(*) FROM users WHERE role = 'teacher'");
+    const parentsResult = await pool.query("SELECT COUNT(*) FROM users WHERE role = 'parent'");
+    const studentsResult = await pool.query("SELECT COUNT(*) FROM users WHERE role = 'student'");
 
     return {
         totalUsers: parseInt(totalUsersResult.rows[0].count),
-        pendingUsers: parseInt(pendingUsersResult.rows[0].count)
+        pendingApprovals: parseInt(pendingUsersResult.rows[0].count),
+        teachers: parseInt(teachersResult.rows[0].count),
+        parents: parseInt(parentsResult.rows[0].count),
+        students: parseInt(studentsResult.rows[0].count)
     };
 };
+
 
 export const getUserByIdService = async (id) => {
   const result = await pool.query(

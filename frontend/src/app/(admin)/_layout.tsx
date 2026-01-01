@@ -1,71 +1,86 @@
+import React, { useState } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '@/constants/Colors';
+import MenuModal from '@/components/MenuModal';
 
 export default function AdminLayout() {
+    const [menuVisible, setMenuVisible] = useState(false);
+
     return (
-        <Tabs
-            screenOptions={{
-                headerShown: false,
-                tabBarActiveTintColor: COLORS.primary,
-                tabBarInactiveTintColor: COLORS.textLight,
-                tabBarStyle: {
-                    backgroundColor: COLORS.white,
-                    borderTopWidth: 1,
-                    borderTopColor: COLORS.border,
-                    height: 60,
-                    paddingBottom: 8,
-                    paddingTop: 8,
-                },
-                tabBarLabelStyle: {
-                    fontSize: 12,
-                    fontWeight: '600',
-                },
-            }}
-        >
-            <Tabs.Screen
-                name="dashboard"
-                options={{
-                    title: 'Home',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="home" size={size} color={color} />
-                    ),
+        <>
+            <Tabs
+                screenOptions={{
+                    tabBarActiveTintColor: '#4CAF50',
+                    tabBarInactiveTintColor: '#666',
+                    tabBarStyle: {
+                        backgroundColor: '#fff',
+                        borderTopWidth: 1,
+                        borderTopColor: '#E5E7EB',
+                    },
+                    headerShown: false, // Hide page titles
                 }}
+            >
+                <Tabs.Screen
+                    name="dashboard"
+                    options={{
+                        title: 'Dashboard',
+                        tabBarIcon: ({ color, size }) => (
+                            <Ionicons name="grid-outline" size={size} color={color} />
+                        ),
+                    }}
+                />
+                <Tabs.Screen
+                    name="users"
+                    options={{
+                        title: 'Users',
+                        tabBarIcon: ({ color, size }) => (
+                            <Ionicons name="people-outline" size={size} color={color} />
+                        ),
+                    }}
+                />
+                <Tabs.Screen
+                    name="profile"
+                    options={{
+                        title: 'Profile',
+                        tabBarIcon: ({ color, size }) => (
+                            <Ionicons name="person-outline" size={size} color={color} />
+                        ),
+                    }}
+                />
+                <Tabs.Screen
+                    name="menu"
+                    options={{
+                        title: 'Menu',
+                        tabBarIcon: ({ color, size }) => (
+                            <Ionicons name="menu-outline" size={size} color={color} />
+                        ),
+                    }}
+                    listeners={{
+                        tabPress: (e) => {
+                            e.preventDefault();
+                            setMenuVisible(true);
+                        },
+                    }}
+                />
+                {/* Hidden screens - accessible via menu or other navigation */}
+                <Tabs.Screen
+                    name="links"
+                    options={{
+                        href: null, // Hide from tab bar
+                    }}
+                />
+                <Tabs.Screen
+                    name="classes"
+                    options={{
+                        href: null, // Hide from tab bar
+                    }}
+                />
+            </Tabs>
+
+            <MenuModal
+                visible={menuVisible}
+                onClose={() => setMenuVisible(false)}
             />
-            <Tabs.Screen
-                name="approvals"
-                options={{
-                    href: null, // Hide from tab bar but keep accessible via navigation
-                }}
-            />
-            <Tabs.Screen
-                name="users"
-                options={{
-                    title: 'Users',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="people" size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="classes"
-                options={{
-                    title: 'Classes',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="school" size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="profile"
-                options={{
-                    title: 'Profile',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="person" size={size} color={color} />
-                    ),
-                }}
-            />
-        </Tabs>
+        </>
     );
 }
-

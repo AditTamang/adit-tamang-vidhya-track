@@ -113,7 +113,7 @@ async function runMigration() {
       console.log("✓ Admin user already exists");
     }
 
-    console.log("\n✅ Migration complete!");
+    console.log("\n Migration complete!");
     process.exit(0);
   } catch (error) {
     console.error("Migration error:", error.message);

@@ -113,5 +113,189 @@ router.get("/stats", authenticate, isAdmin, async (req, res) => {
     }
 });
 
+// Update user role
+router.put("/update-role/:id", authenticate, isAdmin, async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { role } = req.body;
+
+        if (!role || !['student', 'teacher', 'parent'].includes(role)) {
+            return res.status(400).json({ status: 400, message: "Invalid role" });
+        }
+
+        const result = await pool.query(
+            "UPDATE users SET role = $1 WHERE id = $2 RETURNING id, name, email, role",
+            [role, userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 404, message: "User not found" });
+        }
+
+        res.json({ status: 200, message: "Role updated successfully", data: result.rows[0] });
+    } catch (error) {
+        console.error("Error updating role:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    }
+});
+
+// Get pending parent-student link requests
+router.get("/parent-student-links", authenticate, isAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT 
+                psl.id,
+                psl.parent_id,
+                psl.student_id,
+                psl.status,
+                psl.requested_at as created_at,
+                pu.name as parent_name,
+                pu.email as parent_email,
+                su.name as student_name,
+                su.email as student_email,
+                s.student_code,
+                s.class,
+                s.section
+            FROM parent_student_link psl
+            JOIN users pu ON pu.id = psl.parent_id
+            JOIN students s ON s.id = psl.student_id
+            JOIN users su ON su.id = s.user_id
+            WHERE psl.status = 'pending'
+            ORDER BY psl.requested_at DESC`
+        );
+        res.json({ status: 200, data: result.rows });
+    } catch (error) {
+        console.error("Error fetching parent-student links:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    }
+});
+
+// Approve parent-student link
+router.post("/approve-link/:id", authenticate, isAdmin, async (req, res) => {
+    try {
+        const linkId = req.params.id;
+        const adminId = req.user.id;
+
+        const result = await pool.query(
+            `UPDATE parent_student_link 
+             SET status = 'approved', approved_by = $1, approved_at = NOW()
+             WHERE id = $2 AND status = 'pending'
+             RETURNING *`,
+            [adminId, linkId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 404, message: "Link request not found" });
+        }
+
+        res.json({ status: 200, message: "Link approved successfully", data: result.rows[0] });
+    } catch (error) {
+        console.error("Error approving link:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    }
+});
+
+// Reject parent-student link
+router.post("/reject-link/:id", authenticate, isAdmin, async (req, res) => {
+    try {
+        const linkId = req.params.id;
+
+        const result = await pool.query(
+            `UPDATE parent_student_link 
+             SET status = 'rejected' 
+             WHERE id = $1 AND status = 'pending'
+             RETURNING *`,
+            [linkId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 404, message: "Link request not found" });
+        }
+
+        res.json({ status: 200, message: "Link rejected successfully" });
+    } catch (error) {
+        console.error("Error rejecting link:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    }
+});
+// Get classes and sections for assignment
+router.get("/classes-sections", authenticate, isAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                c.id as class_id, 
+                c.name as class_name, 
+                s.id as section_id, 
+                s.name as section_name,
+                s.teacher_id,
+                u.name as current_teacher_name
+            FROM classes c
+            JOIN sections s ON s.class_id = c.id
+            LEFT JOIN users u ON u.id = s.teacher_id
+            ORDER BY c.id, s.name
+        `);
+        
+        // Group by class
+        const classesMap = new Map();
+        result.rows.forEach(row => {
+            if (!classesMap.has(row.class_id)) {
+                classesMap.set(row.class_id, {
+                    id: row.class_id,
+                    name: row.class_name,
+                    sections: []
+                });
+            }
+            classesMap.get(row.class_id).sections.push({
+                id: row.section_id,
+                name: row.section_name,
+                teacherId: row.teacher_id,
+                teacherName: row.current_teacher_name
+            });
+        });
+
+        res.json({ status: 200, data: Array.from(classesMap.values()) });
+    } catch (error) {
+        console.error("Error fetching classes:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    }
+});
+
+// Update teacher's class assignments (Bulk)
+router.post("/update-teacher-classes", authenticate, isAdmin, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { teacherId, sectionIds } = req.body;
+
+        if (!teacherId || !Array.isArray(sectionIds)) {
+             return res.status(400).json({ status: 400, message: "Invalid parameters" });
+        }
+
+        await client.query('BEGIN');
+
+        // 1. Remove teacher from all sections they currently teach
+        // This ensures if they are unchecked in UI, they are removed.
+        await client.query("UPDATE sections SET teacher_id = NULL WHERE teacher_id = $1", [teacherId]);
+
+        // 2. Assign teacher to the selected sections
+        if (sectionIds.length > 0) {
+            await client.query(
+                "UPDATE sections SET teacher_id = $1 WHERE id = ANY($2::int[])",
+                [teacherId, sectionIds]
+            );
+        }
+
+        await client.query('COMMIT');
+        res.json({ status: 200, message: "Class assignments updated successfully" });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error("Error updating teacher classes:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    } finally {
+        client.release();
+    }
+});
+
 export default router;
+
+
 
