@@ -86,6 +86,7 @@ const ParentStudentLinksScreen = () => {
         );
     };
 
+    
     const handleReject = async (linkId: number, parentName: string, studentName: string) => {
         Alert.alert(
             'Reject Link Request',
