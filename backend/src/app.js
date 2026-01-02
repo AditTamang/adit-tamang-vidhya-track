@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import { networkInterfaces } from "os";
 import pool from "./config/dbConnection.js";
 import errorHandler from "./middlewares/errorHandler.js";
 
@@ -12,10 +13,24 @@ import adminRoutes from "./routes/adminRoutes.js";
 import classRoutes from "./routes/classRoutes.js";
 import gradeRoutes from "./routes/gradeRoutes.js";
 import scheduleRoutes from "./routes/scheduleRoutes.js";
+import academicYearRoutes from "./routes/academicYearRoutes.js";
 
 dotenv.config();
 
 const app = express();
+
+// Function to get local IP address
+function getLocalIP() {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === "IPv4" && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return "localhost";
+}
 
 // Middleware
 app.use(express.json());
@@ -24,17 +39,21 @@ app.use(express.urlencoded({ extended: true }));
 // CORS - allow all origins for mobile app development
 app.use(
   cors({
-    origin: "*", // Allow all origins (mobile app needs this)
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-//Testing the postgresql
+// Testing the PostgreSQL connection
 app.get("/", async (req, res) => {
-  console.log("Start");
-  const result = await pool.query("SELECT current_database()");
-  res.send(`The database name is : ${result.rows[0].current_database}`);
+  try {
+    const result = await pool.query("SELECT current_database()");
+    res.send(`The database name is : ${result.rows[0].current_database}`);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Database connection failed");
+  }
 });
 
 // API Routes
@@ -46,6 +65,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api", classRoutes);
 app.use("/api/grades", gradeRoutes);
 app.use("/api/schedule", scheduleRoutes);
+app.use("/api/academic-years", academicYearRoutes);
 
 // 404 Handler
 app.use((req, res) => {
@@ -62,8 +82,9 @@ const port = process.env.PORT || 3001;
 
 // Listen on all network interfaces (0.0.0.0) for mobile app access
 app.listen(port, "0.0.0.0", () => {
+  const ip = getLocalIP();
   console.log(`Server running on port ${port}`);
-  console.log(`Mobile app can connect to: http://192.168.18.6:${port}`);
+  console.log(`Mobile app can connect to: http://${ip}:${port}`);
 });
 
 export default app;

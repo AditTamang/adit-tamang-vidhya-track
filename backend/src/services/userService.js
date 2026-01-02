@@ -3,7 +3,7 @@ import pool from "../config/dbConnection.js";
 
 export const getAllUsersService = async (limit, offset) => {
   const usersResult = await pool.query(
-    "SELECT id, name, email, role, status, phone_number, is_verified, is_approved, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+    "SELECT id, name, email, role, status, phone_number, is_verified, is_approved, is_active, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2",
     [limit, offset]
   );
   
@@ -36,7 +36,7 @@ export const getDashboardStatsService = async () => {
 
 export const getUserByIdService = async (id) => {
   const result = await pool.query(
-    "SELECT id, name, email, role, status, phone_number, is_verified, created_at, updated_at FROM users WHERE id=$1",
+    "SELECT id, name, email, role, status, phone_number, is_verified, is_approved, is_active, created_at, updated_at FROM users WHERE id=$1",
     [id]
   );
   return result.rows[0];
@@ -55,7 +55,7 @@ export const createUserService = async ({
   const result = await pool.query(
     `INSERT INTO users (name, email, password, role, status, phone_number)
      VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING id, name, email, role, status, phone_number, is_verified, created_at, updated_at`,
+     RETURNING id, name, email, role, status, phone_number, is_verified, is_approved, is_active, created_at, updated_at`,
     [name, email, hashedPassword, role, status, phone_number]
   );
 
@@ -103,7 +103,7 @@ export const updateUserService = async (
     UPDATE users SET ${fields.join(
       ", "
     )}, updated_at=NOW() WHERE id=$${counter} 
-    RETURNING id, name, email, role, status, phone_number, is_verified, created_at, updated_at
+    RETURNING id, name, email, role, status, phone_number, is_verified, is_approved, is_active, created_at, updated_at
   `;
   const result = await pool.query(query, values);
   return result.rows[0];
@@ -111,7 +111,7 @@ export const updateUserService = async (
 
 export const deleteUserService = async (id) => {
   const result = await pool.query(
-    "DELETE FROM users WHERE id=$1 RETURNING id, name, email, role, status, phone_number, is_verified, created_at, updated_at",
+    "DELETE FROM users WHERE id=$1 RETURNING id, name, email, role, status, phone_number, is_verified, is_approved, is_active, created_at, updated_at",
     [id]
   );
   return result.rows[0];

@@ -1,14 +1,45 @@
-// API Configuration
-// Change this to your backend server URL
-// For local development, use your machine's IP address (e.g., http://192.168.1.100:5001)
-// For Android emulator, use http://10.0.2.2:5001
-// For iOS simulator, use http://localhost:5001
-export const API_BASE_URL = __DEV__
-  ? "http://192.168.18.6:5001" // Your current machine IP
-  : "https://your-production-api.com";
+// api.ts
+// API Configuration (Works for Hotspot + LAN + Mobile A / Mobile B)
+// No need to hardcode IP anymore 
+
+import Constants from "expo-constants";
+import { Platform } from "react-native";
+
+//  Your backend port (Change if you use different port)
+const BACKEND_PORT = 5001;
 
 // Timeout for API requests (15 seconds)
 const API_TIMEOUT = 15000;
+
+//  Dynamically detect Laptop IP from Expo's host URI
+const getDevBaseUrl = () => {
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    Constants.manifest2?.extra?.expoClient?.hostUri ||
+    "";
+
+  // hostUri looks like: "192.168.43.120:19000"
+  const ip = hostUri.split(":")[0];
+
+  // fallback if not detected
+  if (!ip) {
+    return Platform.OS === "web"
+      ? `http://localhost:${BACKEND_PORT}`
+      : `http://localhost:${BACKEND_PORT}`;
+  }
+
+  //  Mobile devices must use Laptop IP
+  if (Platform.OS === "android" || Platform.OS === "ios") {
+    return `http://${ip}:${BACKEND_PORT}`;
+  }
+
+  //  Web / Desktop
+  return `http://localhost:${BACKEND_PORT}`;
+};
+
+export const API_BASE_URL = __DEV__
+  ? getDevBaseUrl()
+  : "https://your-production-api.com";
 
 // SECURITY: Token storage - NEVER log or display tokens
 // In-memory token storage (fallback if AsyncStorage is not available)
@@ -85,6 +116,7 @@ export const apiCall = async (
     return response;
   } catch (error: any) {
     clearTimeout(timeoutId);
+
     // Check if it was a timeout error
     if (error.name === "AbortError") {
       throw new Error("Request timeout - check your network connection");

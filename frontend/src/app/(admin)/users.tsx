@@ -20,7 +20,8 @@ import {
     rejectUser,
     updateUserRole,
     getClassesSections,
-    updateTeacherClasses
+    updateTeacherClasses,
+    toggleUserStatus
 } from '@/services/adminService';
 
 type User = {
@@ -30,6 +31,7 @@ type User = {
     role: string;
     phone_number: string;
     is_approved: boolean;
+    is_active: boolean;
     created_at: string;
 };
 
@@ -190,6 +192,32 @@ const UsersScreen = () => {
         } catch (error: any) {
             showToast(error.message || 'Failed to update role', 'error');
         }
+    };
+
+    const handleToggleStatus = async (user: User) => {
+        const action = user.is_active ? 'deactivate' : 'activate';
+        Alert.alert(
+            `${action.charAt(0).toUpperCase() + action.slice(1)} User`,
+            `Are you sure you want to ${action} ${user.name}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: action.charAt(0).toUpperCase() + action.slice(1),
+                    style: user.is_active ? 'destructive' : 'default',
+                    onPress: async () => {
+                        try {
+                            const response = await toggleUserStatus(user.id);
+                            if (response.status === 200) {
+                                showToast(response.message, 'success');
+                                loadData(currentPage);
+                            }
+                        } catch (error: any) {
+                            showToast(error.message || `Failed to ${action} user`, 'error');
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const handleAssignClass = async (user: User) => {
@@ -397,11 +425,28 @@ const UsersScreen = () => {
                                                     <Text style={styles.approvedText}>Approved</Text>
                                                 </View>
                                             )}
+                                            {user.is_active === false && (
+                                                <View style={[styles.approvedBadge, { backgroundColor: '#FFEBEE' }]}>
+                                                    <Ionicons name="close-circle" size={14} color="#F44336" />
+                                                    <Text style={[styles.approvedText, { color: '#F44336' }]}>Inactive</Text>
+                                                </View>
+                                            )}
                                         </View>
                                     </View>
                                 </View>
                                 {user.role !== 'admin' && (
                                     <View style={{ flexDirection: 'row', gap: 8 }}>
+                                        {/* Toggle Active Status */}
+                                        <TouchableOpacity
+                                            style={[styles.editButton, { backgroundColor: user.is_active === false ? '#E8F5E9' : '#FFEBEE' }]}
+                                            onPress={() => handleToggleStatus(user)}
+                                        >
+                                            <Ionicons
+                                                name={user.is_active === false ? "power" : "power"}
+                                                size={20}
+                                                color={user.is_active === false ? "#4CAF50" : "#F44336"}
+                                            />
+                                        </TouchableOpacity>
                                         {user.role === 'teacher' && (
                                             <TouchableOpacity
                                                 style={[styles.editButton, { backgroundColor: '#E3F2FD' }]}

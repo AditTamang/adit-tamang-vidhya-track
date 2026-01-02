@@ -180,9 +180,13 @@ const AdminProfile = () => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
+                            // Clear all auth-related storage
+                            await AsyncStorage.removeItem('authToken');
+                            await AsyncStorage.removeItem('userData');
                             await AsyncStorage.removeItem('token');
                             await AsyncStorage.removeItem('user');
-                            router.replace('/login');
+                            // Navigate to login
+                            router.replace('/(auth)/login');
                         } catch (error) {
                             console.error('Logout error:', error);
                         }
@@ -566,7 +570,7 @@ const AdminProfile = () => {
                         <View style={styles.aboutInfo}>
                             <View style={styles.aboutRow}>
                                 <Text style={styles.aboutLabel}>{t('developer')}</Text>
-                                <Text style={styles.aboutValue}>{t('vidhyaTrackTeam')}</Text>
+                                <Text style={styles.aboutValue}>{t('Adit Tamang')}</Text>
                             </View>
                             <View style={styles.aboutRow}>
                                 <Text style={styles.aboutLabel}>{t('email')}</Text>

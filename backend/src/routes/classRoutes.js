@@ -25,6 +25,16 @@ router.get("/classes", authenticate, async (req, res) => {
 router.post("/classes", authenticate, async (req, res) => {
     try {
         const { name, description } = req.body;
+
+        // Check for duplicate class name
+        const existing = await pool.query(
+            "SELECT id FROM classes WHERE LOWER(name) = LOWER($1)",
+            [name]
+        );
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ status: 400, message: "Class with this name already exists" });
+        }
+
         const result = await pool.query(
             "INSERT INTO classes (name, description) VALUES ($1, $2) RETURNING *",
             [name, description]
@@ -100,6 +110,16 @@ router.get("/classes/:classId/sections", authenticate, async (req, res) => {
 router.post("/sections", authenticate, async (req, res) => {
     try {
         const { name, class_id, teacher_id } = req.body;
+
+        // Check for duplicate section name in the same class
+        const existing = await pool.query(
+            "SELECT id FROM sections WHERE LOWER(name) = LOWER($1) AND class_id = $2",
+            [name, class_id]
+        );
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ status: 400, message: "Section with this name already exists in this class" });
+        }
+
         const result = await pool.query(
             "INSERT INTO sections (name, class_id, teacher_id) VALUES ($1, $2, $3) RETURNING *",
             [name, class_id, teacher_id || null]

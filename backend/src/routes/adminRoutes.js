@@ -295,7 +295,104 @@ router.post("/update-teacher-classes", authenticate, isAdmin, async (req, res) =
     }
 });
 
+// ==========================================
+// USER STATUS MANAGEMENT
+// ==========================================
+
+// Toggle user active status (activate/deactivate)
+router.patch("/toggle-status/:id", authenticate, isAdmin, async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const adminId = req.user.id;
+
+        // Get current status
+        const userResult = await pool.query(
+            "SELECT id, name, is_active, role FROM users WHERE id = $1",
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ status: 404, message: "User not found" });
+        }
+
+        const user = userResult.rows[0];
+
+        // Don't allow deactivating admins
+        if (user.role === 'admin') {
+            return res.status(400).json({ status: 400, message: "Cannot deactivate admin accounts" });
+        }
+
+        // Toggle the status
+        const newStatus = !user.is_active;
+        const result = await pool.query(
+            "UPDATE users SET is_active = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, email, is_active",
+            [newStatus, userId]
+        );
+
+        // Log the action
+        await pool.query(
+            `INSERT INTO audit_logs (admin_id, action, target_type, target_id, details)
+             VALUES ($1, $2, 'user', $3, $4)`,
+            [adminId, newStatus ? 'ACTIVATE_USER' : 'DEACTIVATE_USER', userId, JSON.stringify({ userName: user.name })]
+        );
+
+        res.json({
+            status: 200,
+            message: newStatus ? "User activated successfully" : "User deactivated successfully",
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error("Error toggling user status:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    }
+});
+
+// ==========================================
+// AUDIT LOGS
+// ==========================================
+
+// Get audit logs (with pagination)
+router.get("/audit-logs", authenticate, isAdmin, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+
+        const result = await pool.query(
+            `SELECT 
+                al.id,
+                al.action,
+                al.target_type,
+                al.target_id,
+                al.details,
+                al.created_at,
+                u.name as admin_name
+             FROM audit_logs al
+             LEFT JOIN users u ON u.id = al.admin_id
+             ORDER BY al.created_at DESC
+             LIMIT $1 OFFSET $2`,
+            [limit, offset]
+        );
+
+        const countResult = await pool.query("SELECT COUNT(*) FROM audit_logs");
+        const total = parseInt(countResult.rows[0].count);
+
+        res.json({
+            status: 200,
+            data: {
+                logs: result.rows,
+                meta: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit)
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching audit logs:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    }
+});
+
 export default router;
-
-
-

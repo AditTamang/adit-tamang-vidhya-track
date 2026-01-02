@@ -12,10 +12,14 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(20) DEFAULT 'student',
     is_verified BOOLEAN DEFAULT FALSE,
     is_approved BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,  -- For activate/deactivate feature
     profile_image TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Add is_active column if table already exists
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 
 CREATE TABLE IF NOT EXISTS otps (
     id SERIAL PRIMARY KEY,
@@ -106,10 +110,34 @@ CREATE TABLE IF NOT EXISTS schedules (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- 5. Indexes
+-- 5. Academic Years
+CREATE TABLE IF NOT EXISTS academic_years (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,           -- e.g., "2025-2026"
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_active BOOLEAN DEFAULT FALSE,     -- Only one year can be active
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 6. Audit Logs (for tracking admin actions)
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    admin_id INTEGER REFERENCES users(id),
+    action VARCHAR(100) NOT NULL,        -- e.g., "APPROVE_USER", "CHANGE_ROLE"
+    target_type VARCHAR(50),             -- e.g., "user", "class"
+    target_id INTEGER,
+    details TEXT,                        -- Extra info (JSON string)
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 7. Indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_otp_email_purpose ON otps(email, purpose, is_used, expires_at);
 CREATE INDEX IF NOT EXISTS idx_parent_student_links_parent ON parent_student_links(parent_id);
 CREATE INDEX IF NOT EXISTS idx_parent_student_links_student ON parent_student_links(student_id);
 CREATE INDEX IF NOT EXISTS idx_parent_student_links_status ON parent_student_links(status);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_admin ON audit_logs(admin_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+

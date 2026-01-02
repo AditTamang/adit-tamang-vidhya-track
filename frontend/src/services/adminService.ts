@@ -78,3 +78,15 @@ export const updateTeacherClasses = async (teacherId: number, sectionIds: number
         body: JSON.stringify({ teacherId, sectionIds })
     });
 };
+
+// Toggle user active status (activate/deactivate)
+export const toggleUserStatus = async (userId: number) => {
+    return await makeRequest(`/api/admin/toggle-status/${userId}`, {
+        method: 'PATCH'
+    });
+};
+
+// Get audit logs (with pagination)
+export const getAuditLogs = async (page = 1, limit = 20) => {
+    return await makeRequest(`/api/admin/audit-logs?page=${page}&limit=${limit}`);
+};
