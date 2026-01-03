@@ -25,7 +25,7 @@ export default function AdminLayout() {
                     options={{
                         title: 'Dashboard',
                         tabBarIcon: ({ color, size }) => (
-                            <Ionicons name="grid-outline" size={size} color={color} />
+                            <Ionicons name="home-outline" size={size} color={color} />
                         ),
                     }}
                 />
@@ -71,6 +71,18 @@ export default function AdminLayout() {
                 />
                 <Tabs.Screen
                     name="classes"
+                    options={{
+                        href: null, // Hide from tab bar
+                    }}
+                />
+                <Tabs.Screen
+                    name="academic-years"
+                    options={{
+                        href: null, // Hide from tab bar
+                    }}
+                />
+                <Tabs.Screen
+                    name="audit-logs"
                     options={{
                         href: null, // Hide from tab bar
                     }}

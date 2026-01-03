@@ -40,6 +40,18 @@ export default function MenuModal({ visible, onClose }: MenuModalProps) {
             icon: 'school-outline',
             route: '/(admin)/classes',
         },
+        {
+            id: 'academic-years',
+            title: 'Academic Years',
+            icon: 'calendar-outline',
+            route: '/(admin)/academic-years',
+        },
+        {
+            id: 'audit-logs',
+            title: 'Audit Logs',
+            icon: 'clipboard-outline',
+            route: '/(admin)/audit-logs',
+        },
         // Add more menu items as needed
         // {
         //     id: 'reports',
