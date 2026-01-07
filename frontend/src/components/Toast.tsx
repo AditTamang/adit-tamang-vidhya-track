@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Animated, Platform } from 'react-native';
+import { StyleSheet, Text, Animated } from 'react-native';
 
 interface ToastProps {
     message: string;
@@ -7,44 +7,39 @@ interface ToastProps {
     onHide: () => void;
     type?: 'success' | 'error' | 'info';
 }
-//
+
 const Toast: React.FC<ToastProps> = ({ message, visible, onHide, type = 'info' }) => {
     const [fadeAnim] = useState(new Animated.Value(0));
 
     useEffect(() => {
         if (visible) {
+            // Fade in
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 300,
                 useNativeDriver: true,
             }).start();
 
+            // Auto hide after 3 seconds
             const timer = setTimeout(() => {
                 Animated.timing(fadeAnim, {
                     toValue: 0,
                     duration: 300,
                     useNativeDriver: true,
-                }).start(() => {
-                    onHide();
-                });
+                }).start(() => onHide());
             }, 3000);
 
             return () => clearTimeout(timer);
         }
-    }, [visible, fadeAnim, onHide]);
+    }, [visible]);
 
     if (!visible) return null;
 
-    const getBackgroundColor = () => {
-        switch (type) {
-            case 'success': return '#4CAF50';
-            case 'error': return '#F44336';
-            default: return '#333';
-        }
-    };
+    // Simple color based on type
+    const bgColor = type === 'success' ? '#4CAF50' : type === 'error' ? '#F44336' : '#333';
 
     return (
-        <Animated.View style={[styles.container, { opacity: fadeAnim, backgroundColor: getBackgroundColor() }]}>
+        <Animated.View style={[styles.container, { opacity: fadeAnim, backgroundColor: bgColor }]}>
             <Text style={styles.text}>{message}</Text>
         </Animated.View>
     );
@@ -58,18 +53,12 @@ const styles = StyleSheet.create({
         right: 20,
         padding: 15,
         borderRadius: 8,
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        zIndex: 1000,
         alignItems: 'center',
+        zIndex: 1000,
     },
     text: {
         color: 'white',
         fontSize: 14,
-        fontWeight: '500',
         textAlign: 'center',
     },
 });
