@@ -3,8 +3,8 @@ import { updateProfileService } from "../services/profileService.js";
 export const updateProfileController = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { name, phone } = req.body;
-    const updatedUser = await updateProfileService(userId, name, phone);
+    const { name, phone_number } = req.body;
+    const updatedUser = await updateProfileService(userId, name, phone_number);
 
     res.status(200).json({
       status: 200,
