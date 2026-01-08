@@ -102,6 +102,25 @@ router.get("/classes/:classId/sections", authenticate, async (req, res) => {
     }
 });
 
+// Get sections for the logged-in teacher
+router.get("/sections/my", authenticate, async (req, res) => {
+    try {
+        const teacherId = req.user.id;
+        const result = await pool.query(
+            `SELECT s.*, c.name as class_name 
+             FROM sections s
+             JOIN classes c ON s.class_id = c.id
+             WHERE s.teacher_id = $1
+             ORDER BY c.name, s.name`,
+            [teacherId]
+        );
+        res.json({ status: 200, data: result.rows });
+    } catch (error) {
+        console.error("Error fetching my sections:", error);
+        res.status(500).json({ status: 500, message: "Server error" });
+    }
+});
+
 // ==========================================
 // SECTIONS ROUTES
 // ==========================================
