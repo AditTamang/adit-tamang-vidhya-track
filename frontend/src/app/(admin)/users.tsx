@@ -6,21 +6,16 @@ import {
     ScrollView,
     TouchableOpacity,
     ActivityIndicator,
-    RefreshControl,
-    TextInput,
     Modal,
     Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Toast from '@/components/Toast';
 import {
     getAllUsers,
     getPendingUsers,
     approveUser,
     rejectUser,
     updateUserRole,
-    getClassesSections,
-    updateTeacherClasses,
     toggleUserStatus
 } from '@/services/adminService';
 
@@ -35,281 +30,138 @@ type User = {
     created_at: string;
 };
 
-const UsersScreen = () => {
+export default function UsersScreen() {
     const [users, setUsers] = useState<User[]>([]);
-    const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [pendingUsers, setPendingUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [showRoleModal, setShowRoleModal] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [toast, setToast] = useState({ visible: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
-
-    // Pagination and filtering state
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalUsers, setTotalUsers] = useState(0);
-    const [selectedRole, setSelectedRole] = useState<string>('all'); // all, teacher, student, parent
-    const itemsPerPage = 10;
-
-    // Class assignment state
-    const [classes, setClasses] = useState<any[]>([]);
-    const [showAssignClassModal, setShowAssignClassModal] = useState(false);
-    const [selectedSections, setSelectedSections] = useState<number[]>([]);
-    const [assigning, setAssigning] = useState(false);
-
-    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-        setToast({ visible: true, message, type });
-    };
-
-    const loadData = async (page = 1) => {
-        console.log('loadData started', { page });
-        setLoading(true);
-        try {
-            console.log('Fetching users and pending users...');
-            const [usersResponse, pendingResponse] = await Promise.all([
-                getAllUsers(page, itemsPerPage),
-                getPendingUsers()
-            ]);
-            console.log('Fetch complete', { usersStatus: usersResponse.status, pendingStatus: pendingResponse.status });
-
-            if (usersResponse.status === 200) {
-                setUsers(usersResponse.data.users);
-                setTotalPages(usersResponse.data.totalPages || 1);
-                setTotalUsers(usersResponse.data.totalUsers || usersResponse.data.users.length);
-                setCurrentPage(page);
-            }
-            if (pendingResponse.status === 200) {
-                setPendingUsers(pendingResponse.data);
-            }
-        } catch (error: any) {
-            console.error('Error in loadData:', error);
-            showToast(error.message || 'Failed to load users', 'error');
-        } finally {
-            console.log('Setting loading to false');
-            setLoading(false);
-            setRefreshing(false);
-        }
-    };
-
-    // Filter users by role
-    useEffect(() => {
-        if (selectedRole === 'all') {
-            setFilteredUsers(users);
-        } else {
-            setFilteredUsers(users.filter(user => user.role === selectedRole));
-        }
-    }, [users, selectedRole]);
-
-    const loadClasses = async () => {
-        try {
-            const response = await getClassesSections();
-            if (response.status === 200) {
-                setClasses(response.data);
-                return response.data;
-            }
-        } catch (error) {
-            console.log('Error loading classes:', error);
-            return null;
-        }
-    };
+    const [showRoleModal, setShowRoleModal] = useState(false);
+    const [filter, setFilter] = useState('all');
 
     useEffect(() => {
         loadData();
     }, []);
 
-    const onRefresh = () => {
-        setRefreshing(true);
-        loadData(currentPage);
-    };
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [usersRes, pendingRes] = await Promise.all([
+                getAllUsers(1, 50),
+                getPendingUsers()
+            ]);
 
-    const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= totalPages) {
-            loadData(newPage);
+            if (usersRes.status === 200) {
+                setUsers(usersRes.data.users);
+            }
+            if (pendingRes.status === 200) {
+                setPendingUsers(pendingRes.data);
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to load users');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleRoleFilter = (role: string) => {
-        setSelectedRole(role);
-    };
-
-    const getRoleCount = (role: string) => {
-        if (role === 'all') return users.length;
-        return users.filter(u => u.role === role).length;
-    };
-
+    // Approve user
     const handleApprove = async (userId: number) => {
         try {
-            const response = await approveUser(userId);
-
-            if (response.status === 200) {
-                showToast('User approved successfully', 'success');
+            const res = await approveUser(userId);
+            if (res.status === 200) {
+                Alert.alert('Success', 'User approved');
                 loadData();
             }
         } catch (error: any) {
-            showToast(error.message || 'Failed to approve user', 'error');
+            Alert.alert('Error', error.message);
         }
     };
 
-    const handleReject = async (userId: number) => {
-        Alert.alert(
-            'Reject User',
-            'Are you sure? This will permanently delete the user.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Reject',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const response = await rejectUser(userId);
-
-                            if (response.status === 200) {
-                                showToast('User rejected and removed', 'success');
-                                loadData();
-                            }
-                        } catch (error: any) {
-                            showToast(error.message || 'Failed to reject user', 'error');
+    // Reject user
+    const handleReject = (userId: number) => {
+        Alert.alert('Reject User', 'This will delete the user.', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Reject',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        const res = await rejectUser(userId);
+                        if (res.status === 200) {
+                            Alert.alert('Success', 'User rejected');
+                            loadData();
                         }
+                    } catch (error: any) {
+                        Alert.alert('Error', error.message);
                     }
                 }
-            ]
-        );
+            }
+        ]);
     };
 
+    // Toggle active status
+    const handleToggleStatus = (user: User) => {
+        const action = user.is_active ? 'deactivate' : 'activate';
+        Alert.alert(`${action} user?`, '', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Yes',
+                onPress: async () => {
+                    try {
+                        const res = await toggleUserStatus(user.id);
+                        if (res.status === 200) {
+                            Alert.alert('Success', `User ${action}d`);
+                            loadData();
+                        }
+                    } catch (error: any) {
+                        Alert.alert('Error', error.message);
+                    }
+                }
+            }
+        ]);
+    };
+
+    // Update role
     const handleUpdateRole = async (role: string) => {
         if (!selectedUser) return;
-
         try {
-            const response = await updateUserRole(selectedUser.id, role);
-
-            if (response.status === 200) {
-                showToast('Role updated successfully', 'success');
+            const res = await updateUserRole(selectedUser.id, role);
+            if (res.status === 200) {
+                Alert.alert('Success', 'Role updated');
                 setShowRoleModal(false);
                 setSelectedUser(null);
                 loadData();
             }
         } catch (error: any) {
-            showToast(error.message || 'Failed to update role', 'error');
+            Alert.alert('Error', error.message);
         }
     };
 
-    const handleToggleStatus = async (user: User) => {
-        const action = user.is_active ? 'deactivate' : 'activate';
-        Alert.alert(
-            `${action.charAt(0).toUpperCase() + action.slice(1)} User`,
-            `Are you sure you want to ${action} ${user.name}?`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: action.charAt(0).toUpperCase() + action.slice(1),
-                    style: user.is_active ? 'destructive' : 'default',
-                    onPress: async () => {
-                        try {
-                            const response = await toggleUserStatus(user.id);
-                            if (response.status === 200) {
-                                showToast(response.message, 'success');
-                                loadData(currentPage);
-                            }
-                        } catch (error: any) {
-                            showToast(error.message || `Failed to ${action} user`, 'error');
-                        }
-                    }
-                }
-            ]
-        );
-    };
-
-    const handleAssignClass = async (user: User) => {
-        setSelectedUser(user);
-        setShowAssignClassModal(true);
-        // Load classes and pre-select current assignments
-        const loadedClasses = await loadClasses();
-        if (loadedClasses) {
-            const currentAssignments: number[] = [];
-            loadedClasses.forEach((cls: any) => {
-                cls.sections.forEach((sec: any) => {
-                    if (sec.teacherId === user.id) {
-                        currentAssignments.push(sec.id);
-                    }
-                });
-            });
-            setSelectedSections(currentAssignments);
-        }
-    };
-
-    const toggleSectionSelection = (sectionId: number) => {
-        setSelectedSections(prev => {
-            if (prev.includes(sectionId)) {
-                return prev.filter(id => id !== sectionId);
-            } else {
-                return [...prev, sectionId];
-            }
-        });
-    };
-
-    const submitClassAssignment = async () => {
-        if (!selectedUser) return;
-
-        setAssigning(true);
-        try {
-            const response = await updateTeacherClasses(selectedUser.id, selectedSections);
-
-            if (response.status === 200) {
-                showToast('Class assignments updated', 'success');
-                setShowAssignClassModal(false);
-                // Reload classes to reflect changes immediately in case we re-open
-                loadClasses();
-            }
-        } catch (error: any) {
-            showToast(error.message || 'Failed to update assignments', 'error');
-        } finally {
-            setAssigning(false);
-        }
-    };
-
+    // Get role color
     const getRoleColor = (role: string) => {
-        switch (role) {
-            case 'admin': return '#E91E63';
-            case 'teacher': return '#2196F3';
-            case 'parent': return '#9C27B0';
-            case 'student': return '#4CAF50';
-            default: return '#666';
-        }
+        if (role === 'admin') return '#E91E63';
+        if (role === 'teacher') return '#2196F3';
+        if (role === 'parent') return '#9C27B0';
+        return '#4CAF50';
     };
 
-    const getRoleIcon = (role: string) => {
-        switch (role) {
-            case 'admin': return 'shield-checkmark';
-            case 'teacher': return 'school';
-            case 'parent': return 'people';
-            case 'student': return 'person';
-            default: return 'person';
-        }
-    };
+    // Filter users
+    const filteredUsers = filter === 'all'
+        ? users
+        : users.filter(u => u.role === filter);
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
+            <View style={styles.center}>
                 <ActivityIndicator size="large" color="#4CAF50" />
-                <Text style={styles.loadingText}>Loading Users...</Text>
             </View>
         );
     }
 
     return (
         <View style={styles.container}>
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4CAF50']} />
-                }
-            >
+            <ScrollView style={styles.content}>
                 {/* Header */}
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>User Management</Text>
-                    <Text style={styles.headerSubtitle}>Manage all registered users</Text>
-                </View>
+                <Text style={styles.title}>User Management</Text>
 
                 {/* Pending Approvals */}
                 {pendingUsers.length > 0 && (
@@ -318,29 +170,26 @@ const UsersScreen = () => {
                             Pending Approvals ({pendingUsers.length})
                         </Text>
                         {pendingUsers.map(user => (
-                            <View key={user.id} style={styles.userCard}>
+                            <View key={user.id} style={styles.card}>
                                 <View style={styles.userInfo}>
-                                    <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user.role) + '20' }]}>
-                                        <Ionicons name={getRoleIcon(user.role) as any} size={16} color={getRoleColor(user.role)} />
-                                    </View>
-                                    <View style={styles.userDetails}>
-                                        <Text style={styles.userName}>{user.name}</Text>
-                                        <Text style={styles.userEmail}>{user.email}</Text>
-                                        <Text style={styles.userRole}>{user.role.toUpperCase()}</Text>
-                                    </View>
+                                    <Text style={styles.userName}>{user.name}</Text>
+                                    <Text style={styles.userEmail}>{user.email}</Text>
+                                    <Text style={[styles.roleTag, { backgroundColor: getRoleColor(user.role) }]}>
+                                        {user.role.toUpperCase()}
+                                    </Text>
                                 </View>
-                                <View style={styles.actionButtons}>
+                                <View style={styles.actions}>
                                     <TouchableOpacity
-                                        style={styles.approveButton}
+                                        style={styles.approveBtn}
                                         onPress={() => handleApprove(user.id)}
                                     >
-                                        <Ionicons name="checkmark" size={20} color="#fff" />
+                                        <Ionicons name="checkmark" size={18} color="#fff" />
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={styles.rejectButton}
+                                        style={styles.rejectBtn}
                                         onPress={() => handleReject(user.id)}
                                     >
-                                        <Ionicons name="close" size={20} color="#fff" />
+                                        <Ionicons name="close" size={18} color="#fff" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -348,577 +197,280 @@ const UsersScreen = () => {
                     </View>
                 )}
 
-                {/* Role Filter Tabs */}
-                <View style={styles.section}>
-                    <View style={styles.filterContainer}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
-                            <TouchableOpacity
-                                style={[styles.filterTab, selectedRole === 'all' && styles.filterTabActive]}
-                                onPress={() => handleRoleFilter('all')}
-                            >
-                                <Text style={[styles.filterTabText, selectedRole === 'all' && styles.filterTabTextActive]}>
-                                    All ({getRoleCount('all')})
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.filterTab, selectedRole === 'teacher' && styles.filterTabActive]}
-                                onPress={() => handleRoleFilter('teacher')}
-                            >
-                                <Ionicons name="school" size={18} color={selectedRole === 'teacher' ? '#fff' : '#999'} />
-                                <Text style={[styles.filterTabText, selectedRole === 'teacher' && styles.filterTabTextActive]}>
-                                    Teachers ({getRoleCount('teacher')})
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.filterTab, selectedRole === 'student' && styles.filterTabActive]}
-                                onPress={() => handleRoleFilter('student')}
-                            >
-                                <Ionicons name="person" size={18} color={selectedRole === 'student' ? '#fff' : '#999'} />
-                                <Text style={[styles.filterTabText, selectedRole === 'student' && styles.filterTabTextActive]}>
-                                    Students ({getRoleCount('student')})
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.filterTab, selectedRole === 'parent' && styles.filterTabActive]}
-                                onPress={() => handleRoleFilter('parent')}
-                            >
-                                <Ionicons name="people" size={18} color={selectedRole === 'parent' ? '#fff' : '#999'} />
-                                <Text style={[styles.filterTabText, selectedRole === 'parent' && styles.filterTabTextActive]}>
-                                    Parents ({getRoleCount('parent')})
-                                </Text>
-                            </TouchableOpacity>
-                        </ScrollView>
-                    </View>
-
-                    {/* Users List */}
-                    <View style={styles.usersListHeader}>
-                        <Text style={styles.sectionTitle}>
-                            {selectedRole === 'all' ? 'All Users' : `${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}s`}
-                        </Text>
-                        <Text style={styles.userCount}>
-                            {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
-                        </Text>
-                    </View>
-
-                    {filteredUsers.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <Ionicons name="people-outline" size={48} color="#CCC" />
-                            <Text style={styles.emptyStateText}>No users found</Text>
-                        </View>
-                    ) : (
-                        filteredUsers.map(user => (
-                            <View key={user.id} style={styles.userCard}>
-                                <View style={styles.userInfo}>
-                                    <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user.role) + '20' }]}>
-                                        <Ionicons name={getRoleIcon(user.role) as any} size={16} color={getRoleColor(user.role)} />
-                                    </View>
-                                    <View style={styles.userDetails}>
-                                        <Text style={styles.userName}>{user.name}</Text>
-                                        <Text style={styles.userEmail}>{user.email}</Text>
-                                        <View style={styles.userMetaRow}>
-                                            <Text style={[styles.roleTag, { backgroundColor: getRoleColor(user.role) }]}>
-                                                {user.role.toUpperCase()}
-                                            </Text>
-                                            {user.is_approved && (
-                                                <View style={styles.approvedBadge}>
-                                                    <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
-                                                    <Text style={styles.approvedText}>Approved</Text>
-                                                </View>
-                                            )}
-                                            {user.is_active === false && (
-                                                <View style={[styles.approvedBadge, { backgroundColor: '#FFEBEE' }]}>
-                                                    <Ionicons name="close-circle" size={14} color="#F44336" />
-                                                    <Text style={[styles.approvedText, { color: '#F44336' }]}>Inactive</Text>
-                                                </View>
-                                            )}
-                                        </View>
-                                    </View>
-                                </View>
-                                {user.role !== 'admin' && (
-                                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                                        {/* Toggle Active Status */}
-                                        <TouchableOpacity
-                                            style={[styles.editButton, { backgroundColor: user.is_active === false ? '#E8F5E9' : '#FFEBEE' }]}
-                                            onPress={() => handleToggleStatus(user)}
-                                        >
-                                            <Ionicons
-                                                name={user.is_active === false ? "power" : "power"}
-                                                size={20}
-                                                color={user.is_active === false ? "#4CAF50" : "#F44336"}
-                                            />
-                                        </TouchableOpacity>
-                                        {user.role === 'teacher' && (
-                                            <TouchableOpacity
-                                                style={[styles.editButton, { backgroundColor: '#E3F2FD' }]}
-                                                onPress={() => handleAssignClass(user)}
-                                            >
-                                                <Ionicons name="school-outline" size={20} color="#2196F3" />
-                                            </TouchableOpacity>
-                                        )}
-                                        <TouchableOpacity
-                                            style={styles.editButton}
-                                            onPress={() => {
-                                                setSelectedUser(user);
-                                                setShowRoleModal(true);
-                                            }}
-                                        >
-                                            <Ionicons name="create-outline" size={20} color="#666" />
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            </View>
-                        ))
-                    )}
-
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <View style={styles.paginationContainer}>
-                            <TouchableOpacity
-                                style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
-                                onPress={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage === 1}
-                            >
-                                <Ionicons name="chevron-back" size={20} color={currentPage === 1 ? '#CCC' : '#4CAF50'} />
-                            </TouchableOpacity>
-
-                            <View style={styles.paginationInfo}>
-                                <Text style={styles.paginationText}>
-                                    Page {currentPage} of {totalPages}
-                                </Text>
-                                <Text style={styles.paginationSubtext}>
-                                    {totalUsers} total users
-                                </Text>
-                            </View>
-
-                            <TouchableOpacity
-                                style={[styles.paginationButton, currentPage === totalPages && styles.paginationButtonDisabled]}
-                                onPress={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                            >
-                                <Ionicons name="chevron-forward" size={20} color={currentPage === totalPages ? '#CCC' : '#4CAF50'} />
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                {/* Filter buttons */}
+                <View style={styles.filterRow}>
+                    {['all', 'teacher', 'student', 'parent'].map(role => (
+                        <TouchableOpacity
+                            key={role}
+                            style={[styles.filterBtn, filter === role && styles.filterActive]}
+                            onPress={() => setFilter(role)}
+                        >
+                            <Text style={[styles.filterText, filter === role && styles.filterTextActive]}>
+                                {role === 'all' ? 'All' : role.charAt(0).toUpperCase() + role.slice(1)}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
                 </View>
+
+                {/* Users List */}
+                <Text style={styles.sectionTitle}>All Users ({filteredUsers.length})</Text>
+
+                {filteredUsers.length === 0 ? (
+                    <Text style={styles.emptyText}>No users found</Text>
+                ) : (
+                    filteredUsers.map(user => (
+                        <View key={user.id} style={styles.card}>
+                            <View style={styles.userInfo}>
+                                <Text style={styles.userName}>{user.name}</Text>
+                                <Text style={styles.userEmail}>{user.email}</Text>
+                                <View style={styles.tagRow}>
+                                    <Text style={[styles.roleTag, { backgroundColor: getRoleColor(user.role) }]}>
+                                        {user.role.toUpperCase()}
+                                    </Text>
+                                    {user.is_active === false && (
+                                        <Text style={styles.inactiveTag}>INACTIVE</Text>
+                                    )}
+                                </View>
+                            </View>
+                            {user.role !== 'admin' && (
+                                <View style={styles.actions}>
+                                    <TouchableOpacity
+                                        style={[styles.iconBtn, { backgroundColor: user.is_active ? '#FFEBEE' : '#E8F5E9' }]}
+                                        onPress={() => handleToggleStatus(user)}
+                                    >
+                                        <Ionicons
+                                            name="power"
+                                            size={18}
+                                            color={user.is_active ? '#F44336' : '#4CAF50'}
+                                        />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.iconBtn}
+                                        onPress={() => {
+                                            setSelectedUser(user);
+                                            setShowRoleModal(true);
+                                        }}
+                                    >
+                                        <Ionicons name="create-outline" size={18} color="#666" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        </View>
+                    ))
+                )}
             </ScrollView>
 
-            {/* Assign Class Modal */}
-            <Modal
-                visible={showAssignClassModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowAssignClassModal(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Assign Classes</Text>
-                        <Text style={styles.modalSubtitle}>Teacher: {selectedUser?.name}</Text>
-
-                        <ScrollView style={{ maxHeight: 300 }}>
-                            {classes.map(cls => (
-                                <View key={cls.id} style={{ marginBottom: 15 }}>
-                                    <Text style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 16 }}>
-                                        {cls.name}
-                                    </Text>
-                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                                        {cls.sections.map((sec: any) => {
-                                            const isSelected = selectedSections.includes(sec.id);
-                                            const isAssignedToOther = sec.teacherId && sec.teacherId !== selectedUser?.id;
-
-                                            return (
-                                                <TouchableOpacity
-                                                    key={sec.id}
-                                                    style={[
-                                                        styles.roleOption,
-                                                        { padding: 10, flex: 0, minWidth: 60, justifyContent: 'center' },
-                                                        isSelected && styles.roleOptionActive,
-                                                        isAssignedToOther && { opacity: 0.6, backgroundColor: '#ffebee' }
-                                                    ]}
-                                                    onPress={() => toggleSectionSelection(sec.id)}
-                                                >
-                                                    <Text style={[
-                                                        styles.roleOptionText,
-                                                        isSelected && styles.roleOptionTextActive,
-                                                        { fontSize: 14 },
-                                                        isAssignedToOther && { color: '#d32f2f', fontSize: 12 }
-                                                    ]}>
-                                                        Sec {sec.name}
-                                                        {isAssignedToOther && ` (${sec.teacherName?.split(' ')[0]})`}
-                                                    </Text>
-                                                    {isSelected && (
-                                                        <Ionicons name="checkmark-circle" size={16} color="#fff" style={{ marginLeft: 4 }} />
-                                                    )}
-                                                </TouchableOpacity>
-                                            );
-                                        })}
-                                    </View>
-                                </View>
-                            ))}
-                        </ScrollView>
-
-                        <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
-                            <TouchableOpacity
-                                style={[styles.modalCloseButton, { flex: 1 }]}
-                                onPress={() => setShowAssignClassModal(false)}
-                            >
-                                <Text style={styles.modalCloseText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.modalCloseButton, { flex: 1, backgroundColor: '#4CAF50' }]}
-                                onPress={submitClassAssignment}
-                                disabled={assigning}
-                            >
-                                {assigning ? (
-                                    <ActivityIndicator color="#fff" size="small" />
-                                ) : (
-                                    <Text style={[styles.modalCloseText, { color: '#fff' }]}>Save Assignments</Text>
-                                )}
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Role Update Modal */}
-            <Modal
-                visible={showRoleModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowRoleModal(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Update Role</Text>
+            {/* Role Modal */}
+            <Modal visible={showRoleModal} transparent animationType="fade">
+                <View style={styles.modalBg}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Change Role</Text>
                         <Text style={styles.modalSubtitle}>{selectedUser?.name}</Text>
 
-                        <View style={styles.roleOptions}>
-                            {['student', 'teacher', 'parent'].map(role => (
-                                <TouchableOpacity
-                                    key={role}
-                                    style={[
-                                        styles.roleOption,
-                                        selectedUser?.role === role && styles.roleOptionActive
-                                    ]}
-                                    onPress={() => handleUpdateRole(role)}
-                                >
-                                    <Ionicons
-                                        name={getRoleIcon(role) as any}
-                                        size={24}
-                                        color={selectedUser?.role === role ? '#fff' : getRoleColor(role)}
-                                    />
-                                    <Text style={[
-                                        styles.roleOptionText,
-                                        selectedUser?.role === role && styles.roleOptionTextActive
-                                    ]}>
-                                        {role.charAt(0).toUpperCase() + role.slice(1)}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                        {['student', 'teacher', 'parent'].map(role => (
+                            <TouchableOpacity
+                                key={role}
+                                style={[
+                                    styles.roleOption,
+                                    selectedUser?.role === role && styles.roleOptionActive
+                                ]}
+                                onPress={() => handleUpdateRole(role)}
+                            >
+                                <Text style={styles.roleOptionText}>
+                                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
 
                         <TouchableOpacity
-                            style={styles.modalCloseButton}
+                            style={styles.cancelBtn}
                             onPress={() => {
                                 setShowRoleModal(false);
                                 setSelectedUser(null);
                             }}
                         >
-                            <Text style={styles.modalCloseText}>Cancel</Text>
+                            <Text style={styles.cancelText}>Cancel</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
-
-            <Toast
-                message={toast.message}
-                visible={toast.visible}
-                onHide={() => setToast({ ...toast, visible: false })}
-                type={toast.type}
-            />
         </View>
     );
-};
+}
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: '#f5f5f5',
     },
-    loadingContainer: {
+    center: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#F5F5F5',
     },
-    loadingText: {
-        marginTop: 10,
-        fontSize: 16,
-        color: '#666',
-    },
-    scrollContent: {
+    content: {
+        flex: 1,
         padding: 20,
+        paddingTop: 50,
     },
-    header: {
-        marginBottom: 25,
-    },
-    headerTitle: {
-        fontSize: 28,
+    title: {
+        fontSize: 24,
         fontWeight: 'bold',
-        color: '#000',
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 5,
+        color: '#333',
+        marginBottom: 20,
     },
     section: {
-        marginBottom: 25,
+        marginBottom: 20,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
-        color: '#000',
-        marginBottom: 12,
+        color: '#333',
+        marginBottom: 10,
     },
-    userCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+    card: {
         backgroundColor: '#fff',
-        borderRadius: 12,
+        borderRadius: 10,
         padding: 15,
         marginBottom: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    userInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 1,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
     },
-    roleBadge: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    userDetails: {
+    userInfo: {
         flex: 1,
     },
     userName: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#000',
-        marginBottom: 4,
+        color: '#333',
     },
     userEmail: {
         fontSize: 13,
         color: '#666',
-        marginBottom: 6,
+        marginTop: 2,
     },
-    userMetaRow: {
+    tagRow: {
         flexDirection: 'row',
-        alignItems: 'center',
         gap: 8,
-    },
-    userRole: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#666',
+        marginTop: 6,
     },
     roleTag: {
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 4,
         fontSize: 10,
-        fontWeight: '600',
         color: '#fff',
+        fontWeight: '600',
+        alignSelf: 'flex-start',
+        marginTop: 6,
     },
-    approvedBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
+    inactiveTag: {
+        backgroundColor: '#FFEBEE',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 4,
+        fontSize: 10,
+        color: '#F44336',
+        fontWeight: '600',
     },
-    approvedText: {
-        fontSize: 11,
-        color: '#4CAF50',
-        fontWeight: '500',
-    },
-    actionButtons: {
+    actions: {
         flexDirection: 'row',
         gap: 8,
     },
-    approveButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+    approveBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         backgroundColor: '#4CAF50',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    rejectButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+    rejectBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         backgroundColor: '#F44336',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    editButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#F5F5F5',
+    iconBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#f0f0f0',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    modalOverlay: {
+    filterRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 20,
+    },
+    filterBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: '#e0e0e0',
+        borderRadius: 20,
+    },
+    filterActive: {
+        backgroundColor: '#4CAF50',
+    },
+    filterText: {
+        fontSize: 13,
+        color: '#666',
+    },
+    filterTextActive: {
+        color: '#fff',
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: '#999',
+        marginTop: 30,
+    },
+    modalBg: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    modalContent: {
-        width: '85%',
+    modalBox: {
         backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 25,
+        borderRadius: 12,
+        padding: 20,
+        width: '80%',
     },
     modalTitle: {
-        fontSize: 22,
+        fontSize: 18,
         fontWeight: 'bold',
-        color: '#000',
-        marginBottom: 8,
+        color: '#333',
     },
     modalSubtitle: {
         fontSize: 14,
         color: '#666',
-        marginBottom: 20,
-    },
-    roleOptions: {
-        gap: 12,
-        marginBottom: 20,
+        marginBottom: 15,
     },
     roleOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 15,
-        borderRadius: 12,
-        backgroundColor: '#F5F5F5',
-        gap: 12,
+        padding: 12,
+        borderRadius: 8,
+        backgroundColor: '#f5f5f5',
+        marginBottom: 8,
     },
     roleOptionActive: {
         backgroundColor: '#4CAF50',
     },
     roleOptionText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#000',
-    },
-    roleOptionTextActive: {
-        color: '#fff',
-    },
-    modalCloseButton: {
-        padding: 15,
-        borderRadius: 12,
-        backgroundColor: '#F5F5F5',
-        alignItems: 'center',
-    },
-    modalCloseText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#666',
-    },
-    // Filter tabs styles
-    filterContainer: {
-        marginBottom: 20,
-        paddingVertical: 10,
-    },
-    filterScrollContent: {
-        paddingHorizontal: 0,
-        gap: 12,
-    },
-    filterTab: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        borderRadius: 24,
-        backgroundColor: '#E8E8E8',
-    },
-    filterTabActive: {
-        backgroundColor: '#4CAF50',
-    },
-    filterTabText: {
         fontSize: 15,
-        fontWeight: '600',
+        color: '#333',
+        textAlign: 'center',
+    },
+    cancelBtn: {
+        padding: 12,
+        marginTop: 10,
+    },
+    cancelText: {
+        textAlign: 'center',
         color: '#666',
-    },
-    filterTabTextActive: {
-        color: '#fff',
-    },
-    // Users list header
-    usersListHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    userCount: {
-        fontSize: 14,
-        color: '#999',
-    },
-    // Empty state
-    emptyState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 40,
-    },
-    emptyStateText: {
-        fontSize: 16,
-        color: '#999',
-        marginTop: 12,
-    },
-    // Pagination styles
-    paginationContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 20,
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#E5E7EB',
-    },
-    paginationButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#F5F5F5',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    paginationButtonDisabled: {
-        opacity: 0.4,
-    },
-    paginationInfo: {
-        alignItems: 'center',
-    },
-    paginationText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#000',
-    },
-    paginationSubtext: {
-        fontSize: 12,
-        color: '#999',
-        marginTop: 2,
     },
 });
-
-export default UsersScreen;

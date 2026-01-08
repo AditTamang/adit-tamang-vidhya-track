@@ -62,7 +62,7 @@ const AdminProfile = () => {
 
     const loadUserData = async () => {
         try {
-            const userString = await AsyncStorage.getItem('user');
+            const userString = await AsyncStorage.getItem('userData');
             if (userString) {
                 const user = JSON.parse(userString);
                 setUserData(user);
@@ -102,7 +102,7 @@ const AdminProfile = () => {
                 email: editEmail,
                 phone_number: editPhone
             };
-            await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+            await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
             setUserData(updatedUser as UserData);
             setShowEditModal(false);
             showToast(t('profileUpdated'), 'success');

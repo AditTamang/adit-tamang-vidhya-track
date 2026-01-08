@@ -11,23 +11,21 @@ import {
     Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '@/constants/Colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/services/api';
 
-// Class interface
-interface ClassItem {
+type ClassItem = {
     id: number;
     name: string;
     description?: string;
-}
+};
 
-// Section interface
-interface Section {
+type Section = {
     id: number;
     name: string;
     class_id: number;
     teacher_name?: string;
-}
+};
 
 export default function AdminClassesScreen() {
     const [loading, setLoading] = useState(true);
@@ -39,101 +37,99 @@ export default function AdminClassesScreen() {
     const [showAddClass, setShowAddClass] = useState(false);
     const [showAddSection, setShowAddSection] = useState(false);
     const [newClassName, setNewClassName] = useState('');
-    const [newClassDesc, setNewClassDesc] = useState('');
     const [newSectionName, setNewSectionName] = useState('');
 
     useEffect(() => {
         loadClasses();
     }, []);
 
+    // Get auth token
+    const getToken = async () => {
+        return await AsyncStorage.getItem('authToken');
+    };
+
+    // Load all classes
     const loadClasses = async () => {
         try {
-            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-            const token = await AsyncStorage.getItem('authToken');
-
-            const response = await fetch(`${API_BASE_URL}/api/classes`, {
+            const token = await getToken();
+            const res = await fetch(`${API_BASE_URL}/api/classes`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const data = await response.json();
-
+            const data = await res.json();
             if (data.status === 200) {
                 setClasses(data.data);
             }
         } catch (error) {
-            console.log('Error loading classes:', error);
+            Alert.alert('Error', 'Failed to load classes');
         } finally {
             setLoading(false);
         }
     };
 
+    // Load sections for a class
     const loadSections = async (classId: number) => {
         try {
-            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-            const token = await AsyncStorage.getItem('authToken');
-
-            const response = await fetch(`${API_BASE_URL}/api/classes/${classId}/sections`, {
+            const token = await getToken();
+            const res = await fetch(`${API_BASE_URL}/api/classes/${classId}/sections`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const data = await response.json();
-
+            const data = await res.json();
             if (data.status === 200) {
                 setSections(data.data);
             }
         } catch (error) {
-            console.log('Error loading sections:', error);
+            Alert.alert('Error', 'Failed to load sections');
         }
     };
 
-    const handleClassSelect = (cls: ClassItem) => {
+    // Select a class
+    const handleSelectClass = (cls: ClassItem) => {
         setSelectedClass(cls);
         loadSections(cls.id);
     };
 
+    // Add new class
     const handleAddClass = async () => {
         if (!newClassName.trim()) {
-            Alert.alert('Error', 'Please enter a class name');
+            Alert.alert('Error', 'Enter class name');
             return;
         }
 
         try {
-            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-            const token = await AsyncStorage.getItem('authToken');
-
-            const response = await fetch(`${API_BASE_URL}/api/classes`, {
+            const token = await getToken();
+            const res = await fetch(`${API_BASE_URL}/api/classes`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify({ name: newClassName, description: newClassDesc })
+                body: JSON.stringify({ name: newClassName })
             });
-            const data = await response.json();
+            const data = await res.json();
 
             if (data.status === 201) {
-                Alert.alert('Success', 'Class created successfully');
+                Alert.alert('Success', 'Class created');
                 setShowAddClass(false);
                 setNewClassName('');
-                setNewClassDesc('');
                 loadClasses();
             } else {
-                Alert.alert('Error', data.message || 'Failed to create class');
+                Alert.alert('Error', data.message || 'Failed');
             }
         } catch (error) {
             Alert.alert('Error', 'Something went wrong');
         }
     };
 
+    // Add new section
     const handleAddSection = async () => {
         if (!newSectionName.trim() || !selectedClass) {
-            Alert.alert('Error', 'Please enter a section name');
+            Alert.alert('Error', 'Enter section name');
             return;
         }
 
         try {
-            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-            const token = await AsyncStorage.getItem('authToken');
-
-            const response = await fetch(`${API_BASE_URL}/api/sections`, {
+            const token = await getToken();
+            const res = await fetch(`${API_BASE_URL}/api/sections`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -141,61 +137,56 @@ export default function AdminClassesScreen() {
                 },
                 body: JSON.stringify({ name: newSectionName, class_id: selectedClass.id })
             });
-            const data = await response.json();
+            const data = await res.json();
 
             if (data.status === 201) {
-                Alert.alert('Success', 'Section created successfully');
+                Alert.alert('Success', 'Section created');
                 setShowAddSection(false);
                 setNewSectionName('');
                 loadSections(selectedClass.id);
             } else {
-                Alert.alert('Error', data.message || 'Failed to create section');
+                Alert.alert('Error', data.message || 'Failed');
             }
         } catch (error) {
             Alert.alert('Error', 'Something went wrong');
         }
     };
 
-    const handleDeleteClass = async (classId: number) => {
-        Alert.alert(
-            'Delete Class',
-            'Are you sure? This will delete the class and all its sections.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-                            const token = await AsyncStorage.getItem('authToken');
+    // Delete class
+    const handleDeleteClass = (classId: number) => {
+        Alert.alert('Delete?', 'This will delete all sections too.', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        const token = await getToken();
+                        const res = await fetch(`${API_BASE_URL}/api/classes/${classId}`, {
+                            method: 'DELETE',
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        const data = await res.json();
 
-                            const response = await fetch(`${API_BASE_URL}/api/classes/${classId}`, {
-                                method: 'DELETE',
-                                headers: { Authorization: `Bearer ${token}` }
-                            });
-                            const data = await response.json();
-
-                            if (data.status === 200) {
-                                if (selectedClass?.id === classId) {
-                                    setSelectedClass(null);
-                                    setSections([]);
-                                }
-                                loadClasses();
+                        if (data.status === 200) {
+                            if (selectedClass?.id === classId) {
+                                setSelectedClass(null);
+                                setSections([]);
                             }
-                        } catch (error) {
-                            Alert.alert('Error', 'Failed to delete');
+                            loadClasses();
                         }
+                    } catch (error) {
+                        Alert.alert('Error', 'Failed to delete');
                     }
                 }
-            ]
-        );
+            }
+        ]);
     };
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+            <View style={styles.center}>
+                <ActivityIndicator size="large" color="#4CAF50" />
             </View>
         );
     }
@@ -205,101 +196,81 @@ export default function AdminClassesScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.title}>Classes & Sections</Text>
-                <TouchableOpacity style={styles.addButton} onPress={() => setShowAddClass(true)}>
-                    <Ionicons name="add" size={24} color={COLORS.white} />
+                <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddClass(true)}>
+                    <Ionicons name="add" size={24} color="#fff" />
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Classes List */}
+            <ScrollView style={styles.content}>
+                {/* Classes list */}
                 <Text style={styles.sectionTitle}>Classes</Text>
 
                 {classes.length === 0 ? (
-                    <View style={styles.emptyCard}>
-                        <Ionicons name="school-outline" size={40} color={COLORS.textLight} />
-                        <Text style={styles.emptyText}>No classes yet</Text>
-                        <Text style={styles.emptySubtext}>Tap + to add a class</Text>
-                    </View>
+                    <Text style={styles.emptyText}>No classes yet</Text>
                 ) : (
-                    classes.map((cls) => (
+                    classes.map(cls => (
                         <TouchableOpacity
                             key={cls.id}
-                            style={[styles.classCard, selectedClass?.id === cls.id && styles.classCardSelected]}
-                            onPress={() => handleClassSelect(cls)}
+                            style={[styles.card, selectedClass?.id === cls.id && styles.cardSelected]}
+                            onPress={() => handleSelectClass(cls)}
                         >
-                            <View style={styles.classInfo}>
-                                <Ionicons name="school" size={24} color={selectedClass?.id === cls.id ? COLORS.primary : COLORS.textSecondary} />
-                                <View style={{ marginLeft: 12, flex: 1 }}>
-                                    <Text style={styles.className}>{cls.name}</Text>
-                                    {cls.description && (
-                                        <Text style={styles.classDesc}>{cls.description}</Text>
-                                    )}
-                                </View>
+                            <View style={styles.cardContent}>
+                                <Ionicons name="school" size={20} color="#4CAF50" />
+                                <Text style={styles.cardText}>{cls.name}</Text>
                             </View>
                             <TouchableOpacity onPress={() => handleDeleteClass(cls.id)}>
-                                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                                <Ionicons name="trash-outline" size={18} color="#F44336" />
                             </TouchableOpacity>
                         </TouchableOpacity>
                     ))
                 )}
 
-                {/* Sections (shown when a class is selected) */}
+                {/* Sections */}
                 {selectedClass && (
                     <>
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Sections for {selectedClass.name}</Text>
                             <TouchableOpacity onPress={() => setShowAddSection(true)}>
-                                <Ionicons name="add-circle" size={28} color={COLORS.primary} />
+                                <Ionicons name="add-circle" size={24} color="#4CAF50" />
                             </TouchableOpacity>
                         </View>
 
                         {sections.length === 0 ? (
-                            <View style={styles.emptyCard}>
-                                <Text style={styles.emptyText}>No sections</Text>
-                                <Text style={styles.emptySubtext}>Tap + to add sections</Text>
-                            </View>
+                            <Text style={styles.emptyText}>No sections</Text>
                         ) : (
-                            sections.map((section) => (
-                                <View key={section.id} style={styles.sectionCard}>
-                                    <View style={styles.sectionBadge}>
-                                        <Text style={styles.sectionBadgeText}>{section.name}</Text>
-                                    </View>
-                                    <Text style={styles.sectionTeacher}>
-                                        {section.teacher_name || 'No teacher assigned'}
+                            sections.map(sec => (
+                                <View key={sec.id} style={styles.sectionCard}>
+                                    <Text style={styles.sectionBadge}>{sec.name}</Text>
+                                    <Text style={styles.teacherText}>
+                                        {sec.teacher_name || 'No teacher'}
                                     </Text>
                                 </View>
                             ))
                         )}
                     </>
                 )}
-
-                <View style={{ height: 30 }} />
             </ScrollView>
 
             {/* Add Class Modal */}
-            <Modal visible={showAddClass} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Add New Class</Text>
+            <Modal visible={showAddClass} transparent animationType="fade">
+                <View style={styles.modalBg}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Add Class</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Class Name (e.g., Grade 1)"
+                            placeholder="Class name (e.g. Grade 1)"
                             value={newClassName}
                             onChangeText={setNewClassName}
                         />
-                        <TextInput
-                            style={[styles.input, { height: 80 }]}
-                            placeholder="Description (optional)"
-                            value={newClassDesc}
-                            onChangeText={setNewClassDesc}
-                            multiline
-                        />
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddClass(false)}>
-                                <Text style={styles.cancelBtnText}>Cancel</Text>
+                        <View style={styles.modalBtns}>
+                            <TouchableOpacity
+                                style={styles.cancelBtn}
+                                onPress={() => setShowAddClass(false)}
+                            >
+                                <Text style={styles.cancelText}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.saveBtn} onPress={handleAddClass}>
-                                <Text style={styles.saveBtnText}>Add Class</Text>
+                                <Text style={styles.saveText}>Add</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -307,22 +278,25 @@ export default function AdminClassesScreen() {
             </Modal>
 
             {/* Add Section Modal */}
-            <Modal visible={showAddSection} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Add Section to {selectedClass?.name}</Text>
+            <Modal visible={showAddSection} transparent animationType="fade">
+                <View style={styles.modalBg}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Add Section</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Section Name (e.g., A, B, C)"
+                            placeholder="Section name (e.g. A, B)"
                             value={newSectionName}
                             onChangeText={setNewSectionName}
                         />
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddSection(false)}>
-                                <Text style={styles.cancelBtnText}>Cancel</Text>
+                        <View style={styles.modalBtns}>
+                            <TouchableOpacity
+                                style={styles.cancelBtn}
+                                onPress={() => setShowAddSection(false)}
+                            >
+                                <Text style={styles.cancelText}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.saveBtn} onPress={handleAddSection}>
-                                <Text style={styles.saveBtnText}>Add Section</Text>
+                                <Text style={styles.saveText}>Add</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -335,175 +309,148 @@ export default function AdminClassesScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: '#f5f5f5',
     },
-    loadingContainer: {
+    center: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: COLORS.background,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        padding: 20,
         paddingTop: 50,
-        paddingBottom: 15,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#ddd',
     },
     title: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: COLORS.textPrimary,
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#333',
     },
-    addButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: COLORS.primary,
+    addBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#4CAF50',
         justifyContent: 'center',
         alignItems: 'center',
     },
     content: {
         flex: 1,
-        paddingHorizontal: 20,
+        padding: 15,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: COLORS.textPrimary,
-        marginBottom: 12,
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 10,
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginTop: 20,
-        marginBottom: 12,
-    },
-    emptyCard: {
-        backgroundColor: COLORS.white,
-        borderRadius: 12,
-        padding: 30,
-        alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 10,
     },
     emptyText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: COLORS.textPrimary,
-        marginTop: 10,
+        color: '#999',
+        textAlign: 'center',
+        marginVertical: 20,
     },
-    emptySubtext: {
-        fontSize: 13,
-        color: COLORS.textSecondary,
-        marginTop: 4,
-    },
-    classCard: {
-        backgroundColor: COLORS.white,
-        borderRadius: 12,
-        padding: 16,
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        padding: 15,
+        marginBottom: 10,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 10,
         borderWidth: 2,
         borderColor: 'transparent',
     },
-    classCardSelected: {
-        borderColor: COLORS.primary,
+    cardSelected: {
+        borderColor: '#4CAF50',
     },
-    classInfo: {
+    cardContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 1,
+        gap: 10,
     },
-    className: {
+    cardText: {
         fontSize: 16,
-        fontWeight: '600',
-        color: COLORS.textPrimary,
-    },
-    classDesc: {
-        fontSize: 13,
-        color: COLORS.textSecondary,
-        marginTop: 2,
+        color: '#333',
     },
     sectionCard: {
-        backgroundColor: COLORS.white,
-        borderRadius: 10,
-        padding: 14,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 8,
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
     },
     sectionBadge: {
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: 14,
-        paddingVertical: 6,
-        borderRadius: 16,
-        marginRight: 12,
+        backgroundColor: '#4CAF50',
+        color: '#fff',
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderRadius: 15,
+        fontWeight: '600',
+        marginRight: 10,
     },
-    sectionBadgeText: {
-        color: COLORS.white,
-        fontWeight: '700',
-        fontSize: 14,
+    teacherText: {
+        color: '#666',
     },
-    sectionTeacher: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-    },
-    modalOverlay: {
+    modalBg: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    modalContent: {
-        backgroundColor: COLORS.white,
-        borderRadius: 16,
-        padding: 24,
-        width: '85%',
+    modalBox: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 20,
+        width: '80%',
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: COLORS.textPrimary,
-        marginBottom: 20,
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 15,
     },
     input: {
-        backgroundColor: '#F3F4F6',
-        borderRadius: 10,
-        padding: 14,
-        fontSize: 16,
-        marginBottom: 12,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 15,
+        marginBottom: 15,
     },
-    modalButtons: {
+    modalBtns: {
         flexDirection: 'row',
-        gap: 12,
-        marginTop: 8,
+        gap: 10,
     },
     cancelBtn: {
         flex: 1,
-        padding: 14,
-        borderRadius: 10,
-        backgroundColor: '#F3F4F6',
+        padding: 12,
+        backgroundColor: '#e0e0e0',
+        borderRadius: 8,
         alignItems: 'center',
     },
-    cancelBtnText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: COLORS.textSecondary,
+    cancelText: {
+        color: '#666',
     },
     saveBtn: {
         flex: 1,
-        padding: 14,
-        borderRadius: 10,
-        backgroundColor: COLORS.primary,
+        padding: 12,
+        backgroundColor: '#4CAF50',
+        borderRadius: 8,
         alignItems: 'center',
     },
-    saveBtnText: {
-        fontSize: 16,
+    saveText: {
+        color: '#fff',
         fontWeight: '600',
-        color: COLORS.white,
     },
 });
