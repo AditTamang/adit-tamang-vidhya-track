@@ -75,6 +75,9 @@ export default function ParentDashboard() {
             const AsyncStorage = require('@react-native-async-storage/async-storage').default;
             const token = await AsyncStorage.getItem('authToken');
 
+            console.log('[Link Child] Requesting link for code:', studentCode);
+            console.log('[Link Child] Token exists:', !!token);
+
             const response = await fetch(`${API_BASE_URL}/api/parent-student/request-by-code`, {
                 method: 'POST',
                 headers: {
@@ -83,17 +86,24 @@ export default function ParentDashboard() {
                 },
                 body: JSON.stringify({ studentCode })
             });
+
+            console.log('[Link Child] Response status:', response.status);
+
             const data = await response.json();
+            console.log('[Link Child] Response data:', data);
 
             if (data.status === 201) {
                 alert('Success! Link request sent. Please wait for admin approval.');
                 setShowLinkModal(false);
                 setStudentCode('');
             } else {
+                console.error('[Link Child] Server error:', data.message);
                 alert(data.message || 'Failed to link student');
             }
-        } catch (error) {
-            alert('Error linking student');
+        } catch (error: any) {
+            console.error('[Link Child] Caught error:', error);
+            console.error('[Link Child] Error message:', error.message);
+            alert(`Error: ${error.message || 'Network error'}`);
         } finally {
             setLinking(false);
         }

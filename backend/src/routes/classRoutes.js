@@ -4,10 +4,6 @@ import { authenticate } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// ==========================================
-// CLASSES ROUTES
-// ==========================================
-
 // Get all classes
 router.get("/classes", authenticate, async (req, res) => {
     try {
@@ -120,10 +116,6 @@ router.get("/sections/my", authenticate, async (req, res) => {
         res.status(500).json({ status: 500, message: "Server error" });
     }
 });
-
-// ==========================================
-// SECTIONS ROUTES
-// ==========================================
 
 // Create a section
 router.post("/sections", authenticate, async (req, res) => {
