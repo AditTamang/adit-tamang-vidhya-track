@@ -74,12 +74,14 @@ CREATE TABLE IF NOT EXISTS sections (
 );
 
 -- 4. Relationships & Records
-CREATE TABLE IF NOT EXISTS parent_student_links (
+CREATE TABLE IF NOT EXISTS parent_student_link (
     id SERIAL PRIMARY KEY,
     parent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR(20) DEFAULT 'pending', -- pending, approved, rejected
     approved_by INTEGER REFERENCES users(id),
+    requested_at TIMESTAMP DEFAULT NOW(),
+    approved_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(parent_id, student_id)
 );
@@ -141,3 +143,20 @@ CREATE INDEX IF NOT EXISTS idx_parent_student_links_status ON parent_student_lin
 CREATE INDEX IF NOT EXISTS idx_audit_logs_admin ON audit_logs(admin_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
 
+
+-- 8. Attendance
+CREATE TABLE IF NOT EXISTS attendance (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL, -- present, absent, late, excused
+    remarks TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(student_id, date, class_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);
+CREATE INDEX IF NOT EXISTS idx_attendance_class ON attendance(class_id);

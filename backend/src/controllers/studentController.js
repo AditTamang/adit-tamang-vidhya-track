@@ -1,6 +1,7 @@
 import {
   createStudentService,
   getStudentByIdService,
+  getStudentsBySectionService,
 } from "../services/studentService.js";
 
 export const createStudentController = async (req, res) => {
@@ -27,5 +28,15 @@ export const getStudentController = async (req, res) => {
       .json({ status: 200, message: "Student fetched", data: student });
   } catch (err) {
     res.status(400).json({ status: 400, message: err.message });
+  }
+};
+
+export const getStudentsBySectionController = async (req, res) => {
+  try {
+    const { sectionId } = req.params;
+    const students = await getStudentsBySectionService(sectionId);
+    res.status(200).json({ status: 200, data: students });
+  } catch (err) {
+    res.status(500).json({ status: 500, message: err.message });
   }
 };
