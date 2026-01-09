@@ -65,11 +65,16 @@ const createTables = async () => {
 
   // Parent-Student link (which parent is linked to which student)
   const parentStudentTable = `
-    CREATE TABLE IF NOT EXISTS parent_student (
+    CREATE TABLE IF NOT EXISTS parent_student_link (
       id SERIAL PRIMARY KEY,
-      parent_id INTEGER REFERENCES parents(id) ON DELETE CASCADE,
-      student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
-      created_at TIMESTAMP DEFAULT NOW()
+      parent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      status VARCHAR(20) DEFAULT 'pending',
+      approved_by INTEGER REFERENCES users(id),
+      requested_at TIMESTAMP DEFAULT NOW(),
+      approved_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(parent_id, student_id)
     )
   `;
 
@@ -82,10 +87,104 @@ const createTables = async () => {
   try {
     await pool.query(usersTable);
     await pool.query(otpTable);
+    
+    // Academic Structure
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS classes (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(50) NOT NULL,
+          description TEXT,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sections (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(10) NOT NULL,
+          class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+          teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Roles
     await pool.query(studentsTable);
     await pool.query(parentsTable);
     await pool.query(teachersTable);
-    await pool.query(parentStudentTable);
+    
+    // Relationships & Records
+    // parent_student_link table is created above via parentStudentTable variable
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS grades (
+          id SERIAL PRIMARY KEY,
+          student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          subject VARCHAR(100) NOT NULL,
+          marks DECIMAL(5,2) NOT NULL,
+          total_marks DECIMAL(5,2) DEFAULT 100,
+          grade VARCHAR(5),
+          exam_type VARCHAR(50) DEFAULT 'regular',
+          remarks TEXT,
+          created_by INTEGER REFERENCES users(id),
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS schedules (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(200) NOT NULL,
+          description TEXT,
+          event_date DATE NOT NULL,
+          start_time TIME,
+          end_time TIME,
+          class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+          status VARCHAR(20) DEFAULT 'upcoming',
+          created_by INTEGER REFERENCES users(id),
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS academic_years (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(50) NOT NULL,
+          start_date DATE NOT NULL,
+          end_date DATE NOT NULL,
+          is_active BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+          id SERIAL PRIMARY KEY,
+          admin_id INTEGER REFERENCES users(id),
+          action VARCHAR(100) NOT NULL,
+          target_type VARCHAR(50),
+          target_id INTEGER,
+          details TEXT,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS attendance (
+          id SERIAL PRIMARY KEY,
+          student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+          date DATE NOT NULL,
+          status VARCHAR(20) NOT NULL,
+          remarks TEXT,
+          created_by INTEGER REFERENCES users(id),
+          created_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(student_id, date, class_id)
+      );
+    `);
+
     await pool.query(otpIndex);
     console.log("✓ Database tables created successfully");
   } catch (error) {
